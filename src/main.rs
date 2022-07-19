@@ -44,7 +44,7 @@ fn parse_message_auto(message: String) -> osc::Type {
 }
 
 const DEFAULT_IP: &str = "127.0.0.1";
-const DEFAULT_PORT: u32 = 57110;
+const DEFAULT_PORT: u16 = 57110;
 
 enum Task {
   Monitor(String),
@@ -76,7 +76,7 @@ fn get_render_config() -> RenderConfig {
   render_config
 }
 
-fn msg_parse(port: u32, address: String, osc_path: &str, osc_args: Vec<osc::Type>) {
+fn msg_parse(port: u16, address: String, osc_path: &str, osc_args: Vec<osc::Type>) {
   let full_address = format!("{}:{}", address, port);
     
   let sender = osc::sender()
@@ -88,10 +88,14 @@ fn msg_parse(port: u32, address: String, osc_path: &str, osc_args: Vec<osc::Type
   sender.send(packet).ok();
 }
 
-// TODO: 
-fn monitor() { }
+fn monitor(port: u16) { 
+  let recv = osc::receiver(port).expect("Could not connect to receiver address"); 
+  loop {
+    println!("{:?}", recv.recv().unwrap());
+  }
+}
 
-fn send(port: u32, address: String) {
+fn send(port: u16, address: String) {
   Text::new( 
     &format!( "{} {} {} {} {} {}",
       format!("Sending OSC messages to {:?}: {:?} \n",address, port),
@@ -123,7 +127,7 @@ fn main() -> InquireResult<()> {
   ];
 
   let task = Select::new("What do you want to do?", tasks).prompt().unwrap();
-  let port: u32 = CustomType::new("What port do you want to connect to?")
+  let port: u16 = CustomType::new("What port do you want to connect to?")
         .with_default(( DEFAULT_PORT, &|i| format!("{}", i) ))
         .with_error_message("Please type a valid number")
         .prompt()
@@ -135,7 +139,7 @@ fn main() -> InquireResult<()> {
 
 
   match task {
-    Task::Monitor(_) => monitor(),
+    Task::Monitor(_) => monitor(port),
     Task::Send(_) => send(port, address),
   };
 
