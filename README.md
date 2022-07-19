@@ -1,6 +1,6 @@
 # `oscd`
 
-`oscd`, a simple interactive OSC debugger for the terminal inspired by [osc-debugger](https://github.com/alexanderwallin/osc-debugger),with auto type casting and support sending multiple osc msg. 
+`oscd`, a simple interactive OSC debugger for the terminal inspired by [osc-debugger](https://github.com/alexanderwallin/osc-debugger), with auto type casting and support sending multiple osc msg. 
 
 <img src="./ss.gif">
 
@@ -10,7 +10,7 @@ It has two simple features:
 * Monitor OSC messages (over UDP) sent to a port [WIP]
 * Send OSC messages (over UDP) to a port
   - default port = 57110
-  - default address = '0.0.0.0'
+  - default address = '127.0.0.1'
 
 ## Run
 - `cargo run` 
