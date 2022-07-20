@@ -11,8 +11,8 @@ It has two simple features:
 
 * Monitor OSC messages (over UDP) sent to a port
 * Send OSC messages (over UDP) to a port
-  - default port = 57110
-  - default address = '127.0.0.1'
+  - default port = `57110`
+  - default address = `127.0.0.1`
 
 ## Run
 - easiest way is to download [released binary files](https://github.com/karnpapon/oscd/releases), unzip and put it where executable file lives based on your Operating System eg. `usr/local/bin` (for OSX)
