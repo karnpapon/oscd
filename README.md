@@ -15,6 +15,10 @@ It has two simple features:
   - default address = '127.0.0.1'
 
 ## Run
+- easiest way is to download [released binary files](https://github.com/karnpapon/oscd/releases), unzip and put it where executable file lives based on your Operating System eg. `usr/local/bin` (for OSX)
+- type `oscd` to run program
+
+## Development
 - `cargo run` 
 
 ## Usage
@@ -24,7 +28,9 @@ It has two simple features:
 - eg. `/s_new default -1 0 0 freq 850`, will be parsed as `("s_new", [String("default"), Int(-1), Int(0), Int(0), String("freq"), Int(850)])`)
 
 
-## Development
-- binary building based on [trust](https://github.com/japaric/trust)
-  - `.travis.yml`, for Linux & OSX
-  - `appveyor.yml`, for Window
+## Building / Release
+- binary building with Github Action and supported following architectures
+  - aarch64-linux
+  - x86_64-linux
+  - x86_64-macos
+  - x86_64-windows
