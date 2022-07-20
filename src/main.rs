@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 mod parser;
 mod prompt;
 mod task;
