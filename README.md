@@ -21,4 +21,7 @@ It has two simple features:
 - eg. `/s_new default -1 0 0 freq 850`, will be parsed as `("s_new", [String("default"), Int(-1), Int(0), Int(0), String("freq"), Int(850)])`)
 
 
-
+## Development
+- binary building based on [trust](https://github.com/japaric/trust)
+  - `.travis.yml`, for Linux & OSX
+  - `appveyor.yml`, for Window
