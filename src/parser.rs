@@ -35,15 +35,3 @@ fn parse_message_auto(message: String) -> osc::Type {
     Val::String(val) => osc::Type::String(val),
   }
 }
-
-pub fn msg_parse(port: u16, address: String, osc_path: &str, osc_args: Vec<osc::Type>) {
-  let full_address = format!("{}:{}", address, port);
-    
-  let sender = osc::sender()
-  .expect("Could not bind to default socket")
-  .connect(full_address)
-  .expect("Could not connect to socket at address");
-  
-  let packet = (osc_path, osc_args);
-  sender.send(packet).ok();
-}

@@ -18,7 +18,6 @@ pub fn get_render_config() -> RenderConfig {
   render_config
 }
 
-
 pub fn prompt() -> InquireResult<()> {
   let tasks = vec![
     Task::Monitor("Monitor OSC messages".to_string()),
@@ -31,15 +30,13 @@ pub fn prompt() -> InquireResult<()> {
         .with_error_message("Please type a valid number")
         .prompt()
         .unwrap();
-  let address: String = Text::new("What host IP do you want to connect to?")
-        .with_default(DEFAULT_IP)
-        .prompt()
-        .unwrap();
-
-
+ 
   match task {
     Task::Monitor(_) => monitor(port),
-    Task::Send(_) => send(port, address),
+    Task::Send(_) => { 
+      let address: String = Text::new("What host IP do you want to connect to?").with_default(DEFAULT_IP).prompt().unwrap();
+      send(port, address)
+    },
   };
 
   Ok(())
