@@ -59,7 +59,7 @@ pub fn send(port: u16, address: String) {
                 break;
             }
             let argument_msg = tail
-                .into_iter()
+                .iter()
                 .map(|x| parser::parse_message(x.to_string()))
                 .collect();
             send_packet(port, address.clone(), osc_path, argument_msg);
