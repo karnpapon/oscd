@@ -2,7 +2,7 @@
 
 `oscd`, a simple interactive OSC debugger for the terminal inspired by [osc-debugger](https://github.com/alexanderwallin/osc-debugger), with auto type casting and support sending multiple osc msg. 
 
-<img src="./ss2.gif">
+<img src="./ss3.gif">
 
 It has two simple features:
 
