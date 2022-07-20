@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths-ignore:
-    - 'README.md'
-    - 'noted.md'
+      - 'README.md'
+      - 'noted.md'
   schedule:
     - cron: '00 01 * * *'
 
