@@ -3,7 +3,7 @@
 [![Build](https://github.com/karnpapon/oscd/actions/workflows/build.yml/badge.svg)](https://github.com/karnpapon/oscd/actions/workflows/build.yml)
 [![Release](https://github.com/karnpapon/oscd/actions/workflows/release.yml/badge.svg)](https://github.com/karnpapon/oscd/actions/workflows/release.yml)
 
-`oscd`, a simple interactive OSC debugger for the terminal inspired by [osc-debugger](https://github.com/alexanderwallin/osc-debugger), with auto type casting and support sending multiple osc msg. 
+`oscd`, a simple interactive [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) debugger for the terminal inspired by [osc-debugger](https://github.com/alexanderwallin/osc-debugger), with auto type casting and support sending multiple osc msg. 
 
 <img src="./ss3.gif">
 
@@ -27,6 +27,22 @@ It has two simple features:
 - `<value>` is a number or a <ins>string without wrapping in double quotes</ins> and can have multiple values.
 - eg. `/s_new default -1 0 0 freq 850`, will be parsed as `("s_new", [String("default"), Int(-1), Int(0), Int(0), String("freq"), Int(850)])`)
 
+## Types [WIP]
+`oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
+- [x] Int(i32)  
+- [x] Float(f32)  
+- [x] Double(f64)
+- [x] String(String)
+- [ ] Blob(Vec<u8>)
+- [ ] Time(OscTime)
+- [ ] Long(i64)
+- [ ] Char(char)
+- [ ] Color(OscColor)
+- [ ] Midi(OscMidiMessage)
+- [ ] Bool(bool)
+- [ ] Array(OscArray)
+- [ ] Nil
+- [ ] Inf
 
 ## Building / Release
 - binary building with Github Action and supported following architectures
