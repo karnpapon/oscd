@@ -35,7 +35,7 @@ pub fn parse_message(message: String) -> osc::Type {
 }
 
 fn parse_message_auto(message: String) -> osc::Type {
-  let parsed = message.replace("\"", "").parse::<Val>().unwrap();
+  let parsed = message.replace('\"', "").parse::<Val>().unwrap();
   match parsed {
     Val::I32(val) => osc::Type::Int(val),
     Val::F32(val) => osc::Type::Float(val),
