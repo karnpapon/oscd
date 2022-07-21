@@ -60,6 +60,7 @@ pub fn send(port: u16, address: String) {
       }
       let argument_msg = tail
         .iter()
+        .filter(|x| x != &&"")
         .map(|x| parser::parse_message(x.to_string()))
         .collect();
       send_packet(port, address.clone(), osc_path, argument_msg);
@@ -78,5 +79,6 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<osc
     .expect("Could not connect to socket at address");
 
   let packet = (osc_path, osc_args);
+  // println!("packet = {:?}", packet);
   sender.send(packet).ok();
 }

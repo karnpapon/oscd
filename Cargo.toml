@@ -14,4 +14,5 @@ path = "src/main.rs"
 termion = { git = "https://gitlab.redox-os.org/Jezza/termion.git", branch = "windows-support" }
 colored = "2"
 nannou_osc = "0.14.0"  
-inquire = { version = "0.2.1", features = ["date"] }
+inquire = { version = "0.2.1"}
+regex = "1"
