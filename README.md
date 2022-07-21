@@ -50,3 +50,9 @@ It has two simple features:
   - x86_64-linux
   - x86_64-macos
   - x86_64-windows
+
+
+## Resources
+- https://ccrma.stanford.edu/groups/osc/index.html
+- https://ccrma.stanford.edu/groups/osc/spec-1_0.html
+- https://ccrma.stanford.edu/groups/osc/files/2009-NIME-OSC-1.1.pdf

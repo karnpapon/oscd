@@ -1,6 +1,6 @@
 use nannou_osc as osc;
-use std::str::FromStr;
 use regex::Regex;
+use std::str::FromStr;
 
 #[derive(PartialEq, Debug)]
 enum Val {
@@ -9,7 +9,7 @@ enum Val {
   F64(f64),
   Boolean(bool),
   String(String),
-  Char(char)
+  Char(char),
 }
 
 impl FromStr for Val {
@@ -23,11 +23,11 @@ impl FromStr for Val {
       s.parse::<bool>(),
       s.parse::<String>(),
     ) {
-      (Ok(i), _, _, _, _, _ ) => Ok(Val::I32(i)),
-      (_, Ok(f), _, _, _, _ ) => Ok(Val::F32(f)),
-      (_, _, Ok(f), _, _, _ ) => Ok(Val::F64(f)),
-      (_, _, _, Ok(c), _, _ ) => Ok(Val::Char(c)),
-      (_, _, _, _, Ok(b), _ ) => Ok(Val::Boolean(b)),
+      (Ok(i), _, _, _, _, _) => Ok(Val::I32(i)),
+      (_, Ok(f), _, _, _, _) => Ok(Val::F32(f)),
+      (_, _, Ok(f), _, _, _) => Ok(Val::F64(f)),
+      (_, _, _, Ok(c), _, _) => Ok(Val::Char(c)),
+      (_, _, _, _, Ok(b), _) => Ok(Val::Boolean(b)),
       (_, _, _, _, _, Ok(st)) => Ok(Val::String(st)),
       _ => Err("Unrecognized type."),
     }
