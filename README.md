@@ -42,8 +42,8 @@ It has two simple features:
 | &#9744; | Color(OscColor)      |                                    |                                                               |
 | &#9744; | Midi(OscMidiMessage) |                                    |                                                               |
 | &#9744; | Array(OscArray)      |                                    |                                                               |
-| &#9745; | Nil                  |                                    |                                                               |
-| &#9745; | Inf                  |                                    |                                                               |
+| &#9745; | Nil                  | `Nil`                              |                                                               |
+| &#9745; | Inf                  | `Inf`                              |                                                               |
 
 ## Development
 - `cargo run` 
