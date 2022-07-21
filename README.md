@@ -14,12 +14,9 @@ It has two simple features:
   - default port = `57110`
   - default address = `127.0.0.1`
 
-## Run
+## Install / Run
 - easiest way is to download [released binary files](https://github.com/karnpapon/oscd/releases), unzip and put it where executable file lives based on your Operating System eg. `usr/local/bin` (for OSX)
 - type `oscd` to run program
-
-## Development
-- `cargo run` 
 
 ## Usage
 - Use the following format to send messages: `<address> <argument>`
@@ -30,20 +27,26 @@ It has two simple features:
 
 ## Types [WIP]
 `oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
-- [x] Int(i32)  
-- [x] Float(f32)  
-- [x] Double(f64)
-- [x] String(String)
-- [x] Bool(bool)
-- [x] Char(char)
-- [x] Long(i64)
-- [ ] Blob(Vec<u8>)
-- [ ] Time(OscTime)
-- [ ] Color(OscColor)
-- [ ] Midi(OscMidiMessage)
-- [ ] Array(OscArray)
-- [x] Nil
-- [x] Inf
+
+| status  | types                | example                            | notes                                                         |
+|---------|----------------------|------------------------------------|---------------------------------------------------------------|
+| &#9745; | Int(i32)             | `1234_i32`                         |                                                               |
+| &#9745; | Long(i64)            | `1234_i64`                         |                                                               |
+| &#9745; | Float(f32)           | `1234.32_f32`                      |                                                               |
+| &#9745; | Double(f64)          | `1234.32_f64`                      |                                                               |
+| &#9745; | String(String)       | `str_no_space` or `"str_no_space"` |                                                               |
+| &#9745; | Bool(bool)           | `true` or `false`                  |                                                               |
+| &#9745; | Char(char)           | `'A'`                              | needs single quotes otherwise `oscd` will cast it to `String` |
+| &#9744; | Blob(Vec<u8>)        |                                    |                                                               |
+| &#9744; | Time(OscTime)        |                                    |                                                               |
+| &#9744; | Color(OscColor)      |                                    |                                                               |
+| &#9744; | Midi(OscMidiMessage) |                                    |                                                               |
+| &#9744; | Array(OscArray)      |                                    |                                                               |
+| &#9745; | Nil                  |                                    |                                                               |
+| &#9745; | Inf                  |                                    |                                                               |
+
+## Development
+- `cargo run` 
 
 ## Building / Release
 - binary building with Github Action and supported following architectures
