@@ -41,8 +41,8 @@ It has two simple features:
 - [ ] Color(OscColor)
 - [ ] Midi(OscMidiMessage)
 - [ ] Array(OscArray)
-- [ ] Nil
-- [ ] Inf
+- [x] Nil
+- [x] Inf
 
 ## Building / Release
 - binary building with Github Action and supported following architectures

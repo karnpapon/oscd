@@ -10,12 +10,17 @@ enum Val {
   Boolean(bool),
   String(String),
   Char(char),
+  Nil,
+  Inf,
 }
 
+// TODO: ? use macro
 impl FromStr for Val {
   type Err = &'static str;
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match (
+      s == "Nil",
+      s == "Inf",
       s.parse::<i32>(),
       s.parse::<f32>(),
       s.parse::<f64>(),
@@ -23,12 +28,14 @@ impl FromStr for Val {
       s.parse::<bool>(),
       s.parse::<String>(),
     ) {
-      (Ok(i), _, _, _, _, _) => Ok(Val::I32(i)),
-      (_, Ok(f), _, _, _, _) => Ok(Val::F32(f)),
-      (_, _, Ok(f), _, _, _) => Ok(Val::F64(f)),
-      (_, _, _, Ok(c), _, _) => Ok(Val::Char(c)),
-      (_, _, _, _, Ok(b), _) => Ok(Val::Boolean(b)),
-      (_, _, _, _, _, Ok(st)) => Ok(Val::String(st)),
+      (true, _, _, _, _, _, _, _) => Ok(Val::Nil),
+      (_, true, _, _, _, _, _, _) => Ok(Val::Inf),
+      (_, _, Ok(i), _, _, _, _, _) => Ok(Val::I32(i)),
+      (_, _, _, Ok(f), _, _, _, _) => Ok(Val::F32(f)),
+      (_, _, _, _, Ok(f), _, _, _) => Ok(Val::F64(f)),
+      (_, _, _, _, _, Ok(c), _, _) => Ok(Val::Char(c)),
+      (_, _, _, _, _, _, Ok(b), _) => Ok(Val::Boolean(b)),
+      (_, _, _, _, _, _, _, Ok(st)) => Ok(Val::String(st)),
       _ => Err("Unrecognized type."),
     }
   }
@@ -48,6 +55,8 @@ fn parse_message_auto(message: String) -> osc::Type {
     Val::Char(val) => osc::Type::Char(val),
     Val::Boolean(val) => osc::Type::Bool(val),
     Val::String(val) => osc::Type::String(val),
+    Val::Nil => osc::Type::Nil,
+    Val::Inf => osc::Type::Inf,
   }
 }
 
