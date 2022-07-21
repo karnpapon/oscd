@@ -26,7 +26,7 @@ It has two simple features:
 - `<address>` is osc path to communicate with.
 - `<argument>` is a number or a string (double quotes can be omitted) and can have multiple arguments.
 - eg. `/s_new "default" -1 0 0 freq 850`, will be parsed as `("s_new", [String("default"), Int(-1), Int(0), Int(0), String("freq"), Int(850)])`)
-- by default `oscd` automatically casting type for you, but it also support [Rust implicit conversion](https://doc.rust-lang.org/rust-by-example/types/cast.html) eg. `65.4321_f64` is equivalent to `65.4321 as f64` (in Rust language) and will be parsed osc as `Double(65.4321)` see support types below.
+- by default `oscd` automatically casting type for you, but it also support [Rust implicit conversion](https://doc.rust-lang.org/rust-by-example/types/cast.html) eg. `65.4321_f64` is equivalent to `65.4321 as f64` (in Rust language) and will be parsed osc as `Double(65.4321)` see supported types below.
 
 ## Types [WIP]
 `oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
