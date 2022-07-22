@@ -49,7 +49,6 @@ pub fn parse_message(message: String) -> osc::Type {
 }
 
 fn parse_message_auto(message: String) -> osc::Type {
-
   // handle numeric literals type conversion.
   // eg.`1.234_f64` is equivalent to `1.234 as f64`
   let number_types = Regex::new(r"(_i32)$|(_i64)$|(_f32)$|(_f64)$").unwrap();

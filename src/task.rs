@@ -52,7 +52,12 @@ pub fn send(port: u16, address: String) {
       .with_render_config(prompt::get_render_config())
       .prompt()
       .unwrap();
-    let osc_msg_vec = osc_msg.try_into_args().ok().unwrap().into_iter().collect::<Vec<String>>();
+    let osc_msg_vec = osc_msg
+      .try_into_args()
+      .ok()
+      .unwrap()
+      .into_iter()
+      .collect::<Vec<String>>();
 
     if let Some((first, tail)) = osc_msg_vec.split_first() {
       let osc_path = first;

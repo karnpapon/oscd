@@ -1,6 +1,5 @@
 /// basically, this is just a lightweight lexer, tokenizer
 /// to capture string with whitespace inside single/double quotes.
-
 use core::mem;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
@@ -18,10 +17,10 @@ impl std::error::Error for ParseError {}
 enum CaptureSymbol {
   Delimiter,
   Backslash,
-  Unquoted, 
+  Unquoted,
   UnquotedBackslash,
-  SingleQuoted, 
-  DoubleQuoted, 
+  SingleQuoted,
+  DoubleQuoted,
 }
 
 pub(crate) trait IntoArgs {
