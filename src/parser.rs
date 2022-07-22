@@ -53,7 +53,7 @@ fn parse_message_auto(message: String) -> osc::Type {
   // eg.`1.234_f64` is equivalent to `1.234 as f64`
   let number_types = Regex::new(r"(_i32)$|(_i64)$|(_f32)$|(_f64)$").unwrap();
   if number_types.is_match(&message) {
-    let m = &message.to_string();
+    let m = &message;
     let num: Vec<_> = Regex::new(r"[_]").unwrap().split(m).collect();
     return match num[1] {
       "i32" => osc::Type::Int(num[0].parse::<i32>().unwrap()),

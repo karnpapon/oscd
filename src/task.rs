@@ -61,12 +61,12 @@ pub fn send(port: u16, address: String) {
 
     if let Some((first, tail)) = osc_msg_vec.split_first() {
       let osc_path = first;
-      if osc_path == &":q" {
+      if osc_path == ":q" {
         break;
       }
       let argument_msg = tail
         .iter()
-        .filter(|x| x != &&"")
+        .filter(|x| x != &"")
         .map(|x| parser::parse_message(x.to_string()))
         .collect();
       send_packet(port, address.clone(), osc_path, argument_msg);
