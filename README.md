@@ -37,7 +37,7 @@ It has two simple features:
 | &#9745; | Long(i64)            | `1234_i64`                         |                                                               |
 | &#9745; | Float(f32)           | `1234.32_f32`                      |                                                               |
 | &#9745; | Double(f64)          | `1234.32_f64`                      |                                                               |
-| &#9745; | String(String)       | `str_no_space` or `"str_no_space"` |                                                               |
+| &#9745; | String(String)       | `str_no_space`, `"str with space"` |                                                               |
 | &#9745; | Bool(bool)           | `true` or `false`                  |                                                               |
 | &#9745; | Char(char)           | `'A'`                              | needs single quotes otherwise `oscd` will cast it to `String` |
 | &#9744; | Blob(Vec&#60;u8>)    |                                    |                                                               |

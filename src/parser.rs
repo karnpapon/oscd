@@ -49,15 +49,12 @@ pub fn parse_message(message: String) -> osc::Type {
 }
 
 fn parse_message_auto(message: String) -> osc::Type {
-  // remove single/double quotes
-  let re = Regex::new(r#"^['"](.*)['"]$"#).unwrap();
-  let replace = re.replace(&message, "$1");
 
-  // handle implicit conversion.
-  // check number type eg.`1.234_f64` is equivalent to `1.234 as f64`
+  // handle numeric literals type conversion.
+  // eg.`1.234_f64` is equivalent to `1.234 as f64`
   let number_types = Regex::new(r"(_i32)$|(_i64)$|(_f32)$|(_f64)$").unwrap();
-  if number_types.is_match(&replace) {
-    let m = &replace.to_string();
+  if number_types.is_match(&message) {
+    let m = &message.to_string();
     let num: Vec<_> = Regex::new(r"[_]").unwrap().split(m).collect();
     return match num[1] {
       "i32" => osc::Type::Int(num[0].parse::<i32>().unwrap()),
@@ -68,7 +65,7 @@ fn parse_message_auto(message: String) -> osc::Type {
     };
   }
 
-  let parsed = replace.parse::<Val>().unwrap();
+  let parsed = message.parse::<Val>().unwrap();
   match parsed {
     Val::I32(val) => osc::Type::Int(val),
     Val::I64(val) => osc::Type::Long(val),
@@ -82,4 +79,5 @@ fn parse_message_auto(message: String) -> osc::Type {
   }
 }
 
-// /s_new "default" 'V' 'tbC' freq 0 -1 1.234_f64
+// test
+// /s_new "default after whitespace" 1002 'A' 'TbcS' freq 12.4533 -12 1.234_f64

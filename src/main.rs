@@ -3,6 +3,7 @@
 mod parser;
 mod prompt;
 mod task;
+mod scanner;
 
 use prompt::prompt;
 

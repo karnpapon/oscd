@@ -8,6 +8,7 @@ use termion::screen::*;
 
 use super::parser;
 use super::prompt;
+use super::scanner::*;
 
 pub enum Task {
   Monitor(String),
@@ -51,7 +52,7 @@ pub fn send(port: u16, address: String) {
       .with_render_config(prompt::get_render_config())
       .prompt()
       .unwrap();
-    let osc_msg_vec = osc_msg.split(' ').into_iter().collect::<Vec<&str>>();
+    let osc_msg_vec = osc_msg.try_into_args().ok().unwrap().into_iter().collect::<Vec<String>>();
 
     if let Some((first, tail)) = osc_msg_vec.split_first() {
       let osc_path = first;
@@ -79,6 +80,6 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<osc
     .expect("Could not connect to socket at address");
 
   let packet = (osc_path, osc_args);
-  // println!("packet = {:?}", packet);
+  println!("packet = {:?}", packet);
   sender.send(packet).ok();
 }
