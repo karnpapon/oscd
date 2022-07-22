@@ -1,4 +1,4 @@
-/// basically, this is just a lightweight lexer, tokenizer
+/// basically just a lightweight lexer, tokenizer
 /// to capture string with whitespace inside single/double quotes.
 use core::mem;
 use std::fmt::{Display, Formatter, Result as FmtResult};
