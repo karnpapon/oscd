@@ -25,7 +25,7 @@ It has two simple features:
 - eg. `/s_new "default" -1 0 0 freq 850`, will be parsed as `("s_new", [String("default"), Int(-1), Int(0), Int(0), String("freq"), Int(850)])`)
 - by default `oscd` automatically casting type for you, and it also support [numeric literals type conversion](https://doc.rust-lang.org/rust-by-example/types/cast.html) 
   - eg. `65.4321_f64` is equivalent to `65.4321 as f64` (`Explicit conversion`) 
-  - and will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`). 
+  - it will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`). 
 - see supported types below.
 
 ## Types [WIP]
@@ -58,6 +58,14 @@ It has two simple features:
   - x86_64-macos
   - x86_64-windows
 
+
+## ⚠️ Bypass security settings. (OSX)
+
+With each iteration of OS X from Mountain Lion onwards, Apple have made it progressively harder for users to access un-certificated downloaded applications/binary, such as those coming from the Open Source/Free Software community.
+
+The problem typically manifests when trying to launch a newly downloaded application/binary whether directly or via the Dock. At the point of downloading a new app, the OS places it on a “quarantine list”. An alarming error message is displayed indicating the application is “damaged”, or from an unidentified developer, and has been prevented from running.
+
+A standard workaround for a single application/binary is to launch using “Open” from the menu that pops up using Right-Click (or Ctrl-Click) on the application’s/binary's icon.
 
 ## Resources
 - https://ccrma.stanford.edu/groups/osc/index.html
