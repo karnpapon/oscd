@@ -1,6 +1,9 @@
-use nannou_osc as osc;
 use regex::Regex;
+use rosc::OscType;
 use std::str::FromStr;
+
+use super::lexer::token::{Token};
+use super::scanner::*;
 
 #[derive(PartialEq, Debug)]
 enum Val {
@@ -13,7 +16,14 @@ enum Val {
   Char(char),
   Nil,
   Inf,
+  // U8(u8)
 }
+
+// TODO: find proper name
+// enum Val2 {
+//   U8(u8),
+//   U32(u32)
+// }
 
 // TODO: ? use macros
 impl FromStr for Val {
@@ -44,11 +54,54 @@ impl FromStr for Val {
   }
 }
 
-pub fn parse_message(message: String) -> osc::Type {
-  parse_message_auto(message)
+// impl FromStr for Val2 {
+//   type Err = &'static str;
+//   fn from_str(s: &str) -> Result<Self, Self::Err> {
+//     match (
+//       s.parse::<u8>(),
+//       s.parse::<u32>(),
+//     ) {
+//       (Ok(v), _,) => Ok(Val2::U8(v)),
+//       (_, Ok(v),) => Ok(Val2::U32(v)),
+//       _ => Err("Unrecognized type."),
+//     }
+//   }
+// }
+
+pub fn parse_message(message: &Token) -> OscType {
+  // match message {
+  //   (m, DataType::Scalar) => parse_scalar(m),
+  //   (m, DataType::Compound) => parse_compound(m),
+  // }
+
+  match message {
+    Token::Ident(val) | Token::StringLiteral(val) => OscType::String(val.clone()),
+    Token::IntLiteral(val) => OscType::Int(val.clone()),
+    Token::FloatLiteral(val) => OscType::Float(val.clone()),
+    Token::BoolLiteral(val) => OscType::Bool(val.clone()),
+    _ => OscType::Nil 
+  }
 }
 
-fn parse_message_auto(message: String) -> osc::Type {
+// fn parse_compound(message: String) -> OscType {
+//   let osc_msg_vec = message
+//     .try_into_compound_args()
+//     .ok()
+//     .unwrap()
+//     .into_iter()
+//     .collect::<Vec<(String, DataType)>>();
+
+//   let argument_msg = osc_msg_vec
+//     .iter()
+//     .map(|x| parse_message(x.clone()))
+//     .collect();
+
+//   // println!("osc_msg_vec = {:?}", osc_msg_vec);
+
+//   OscType::Array(argument_msg)
+// }
+
+fn parse_scalar(message: String) -> OscType {
   // handle numeric literals type conversion.
   // eg.`1.234_f64` is equivalent to `1.234 as f64`
   let number_types = Regex::new(r"(_i32)$|(_i64)$|(_f32)$|(_f64)$").unwrap();
@@ -56,27 +109,29 @@ fn parse_message_auto(message: String) -> osc::Type {
     let m = &message;
     let num: Vec<_> = Regex::new(r"[_]").unwrap().split(m).collect();
     return match num[1] {
-      "i32" => osc::Type::Int(num[0].parse::<i32>().unwrap()),
-      "i64" => osc::Type::Long(num[0].parse::<i64>().unwrap()),
-      "f32" => osc::Type::Float(num[0].parse::<f32>().unwrap()),
-      "f64" => osc::Type::Double(num[0].parse::<f64>().unwrap()),
-      _ => osc::Type::Nil,
+      "i32" => OscType::Int(num[0].parse::<i32>().unwrap()),
+      "i64" => OscType::Long(num[0].parse::<i64>().unwrap()),
+      "f32" => OscType::Float(num[0].parse::<f32>().unwrap()),
+      "f64" => OscType::Double(num[0].parse::<f64>().unwrap()),
+      _ => OscType::Nil,
     };
   }
 
   let parsed = message.parse::<Val>().unwrap();
   match parsed {
-    Val::I32(val) => osc::Type::Int(val),
-    Val::I64(val) => osc::Type::Long(val),
-    Val::F32(val) => osc::Type::Float(val),
-    Val::F64(val) => osc::Type::Double(val),
-    Val::Char(val) => osc::Type::Char(val),
-    Val::Boolean(val) => osc::Type::Bool(val),
-    Val::String(val) => osc::Type::String(val),
-    Val::Nil => osc::Type::Nil,
-    Val::Inf => osc::Type::Inf,
+    Val::I32(val) => OscType::Int(val),
+    Val::I64(val) => OscType::Long(val),
+    Val::F32(val) => OscType::Float(val),
+    Val::F64(val) => OscType::Double(val),
+    Val::Char(val) => OscType::Char(val),
+    Val::Boolean(val) => OscType::Bool(val),
+    Val::String(val) => OscType::String(val),
+    Val::Nil => OscType::Nil,
+    Val::Inf => OscType::Inf,
   }
 }
 
 // test
-// /s_new "default after whitespace" 1002 'A' 'TbcS' freq 12.4533 -12 1.234_f64
+// /s_new "default after whitespace" 1002 'A' 'TbcS' freq 12.4533 -12 1.234_f64 [12 20 15]
+
+// /s_new "default after whitespace" 1002 TbcS freq 12.4533 -12 -13.453

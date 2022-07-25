@@ -1,13 +1,16 @@
 use colored::*;
 use inquire::Text;
-use nannou_osc as osc;
+// use nannou_osc as osc;
+use rosc::OscType;
 use std::fmt;
 use std::io::{stdout, Write};
 use std::thread;
 use termion::screen::*;
 
+use super::osc;
 use super::parser;
 use super::prompt;
+use super::lexer::{ Lexer, token::{Token} };
 use super::scanner::*;
 
 pub enum Task {
@@ -52,31 +55,48 @@ pub fn send(port: u16, address: String) {
       .with_render_config(prompt::get_render_config())
       .prompt()
       .unwrap();
-    let osc_msg_vec = osc_msg
-      .try_into_args()
-      .ok()
-      .unwrap()
-      .into_iter()
-      .collect::<Vec<String>>();
+    let osc_msg_vec = Lexer::lex_tokens(osc_msg.as_bytes()).unwrap();
+     
+    // let osc_msg_vec = osc_msg
+    //   .try_into_args()
+    //   .ok()
+    //   .unwrap()
+    //   .into_iter()
+    //   .collect::<Vec<(String, DataType)>>();
 
-    if let Some((first, tail)) = osc_msg_vec.split_first() {
-      let osc_path = first;
-      if osc_path == ":q" {
-        break;
-      }
-      let argument_msg = tail
-        .iter()
-        .filter(|x| x != &"")
-        .map(|x| parser::parse_message(x.to_string()))
-        .collect();
-      send_packet(port, address.clone(), osc_path, argument_msg);
+    println!("new parser = {:?}", osc_msg_vec);
+
+    if let Some((first, tail)) = osc_msg_vec.1.split_first() {
+      let osc_path = match first { Token::OSCPath(path) => path, Token::Ident(v) => v, _ => "" };
+      if (osc_path) == ":q" { break; }
+      // let argument_msg = tail
+      //     .iter()
+      //     .filter(|x| x.0 == Token::Illegal)
+      //     .map(|x| parser::parse_message(x.clone()))
+      //     .collect::<Vec<OscType>>();
+      println!("tail = {:?}", tail);
+      let argument_msg = tail.iter().map(|x| parser::parse_message(x)).collect::<Vec<OscType>>();
+      send_packet(port, address.clone(), &osc_path, argument_msg);
     }
+
+    // if let Some((first, tail)) = osc_msg_vec.split_first() {
+    //   let osc_path = first.0.clone();
+    //   if osc_path == ":q" {
+    //     break;
+    //   }
+    //   let argument_msg = tail
+    //     .iter()
+    //     .filter(|x| x.0 != "")
+    //     .map(|x| parser::parse_message(x.clone()))
+    //     .collect::<Vec<OscType>>();
+    //   send_packet(port, address.clone(), &osc_path, argument_msg);
+    // }
   });
 
   handler.join().unwrap();
 }
 
-pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<osc::Type>) {
+pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<OscType>) {
   let full_address = format!("{}:{}", address, port);
 
   let sender = osc::sender()
@@ -85,6 +105,6 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<osc
     .expect("Could not connect to socket at address");
 
   let packet = (osc_path, osc_args);
-  // println!("packet = {:?}", packet);
+  println!("packet = {:?}", packet);
   sender.send(packet).ok();
 }

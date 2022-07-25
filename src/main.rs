@@ -1,5 +1,7 @@
 #![allow(missing_docs)]
 
+mod lexer;
+mod osc;
 mod parser;
 mod prompt;
 mod scanner;
