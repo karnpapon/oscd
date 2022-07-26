@@ -23,9 +23,9 @@ It has two simple features:
 - `<address>` is osc path to communicate with.
 - `<argument>` is a number or a string (double quotes can be omitted) and can have multiple arguments.
 - eg. `/s_new "default" -1 0 0 freq 850`, will be parsed as `("s_new", [String("default"), Int(-1), Int(0), Int(0), String("freq"), Int(850)])`)
-- by default `oscd` automatically casting type for you, and it also support [numeric literals type conversion](https://doc.rust-lang.org/rust-by-example/types/cast.html) 
-  - eg. `65.4321_f64` is equivalent to `65.4321 as f64` (`Explicit conversion`) 
-  - it will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`). 
+- by default `oscd` automatically casting type for you, ~~and it also support [numeric literals type conversion](https://doc.rust-lang.org/rust-by-example/types/cast.html)~~
+  - ~~eg. `65.4321_f64` is equivalent to `65.4321 as f64` (`Explicit conversion`)~~
+  - ~~it will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`).~~
 - see supported types below.
 
 ## Types [WIP]
@@ -33,18 +33,18 @@ It has two simple features:
 
 | status  | types                | example                            | notes                                                         |
 |---------|----------------------|------------------------------------|---------------------------------------------------------------|
-| &#9745; | Int(i32)             | `1234_i32`                         |                                                               |
-| &#9745; | Long(i64)            | `1234_i64`                         |                                                               |
-| &#9745; | Float(f32)           | `1234.32_f32`                      |                                                               |
-| &#9745; | Double(f64)          | `1234.32_f64`                      |                                                               |
+| &#9745; | Int(i32)             | `1234`                             |                                                               |
+| &#9744; | Long(i64)            |                                    |                                                               |
+| &#9745; | Float(f32)           | `1234.32`                          |                                                               |
+| &#9744; | Double(f64)          |                                    |                                                               |
 | &#9745; | String(String)       | `str_no_space`, `"str with space"` |                                                               |
 | &#9745; | Bool(bool)           | `true` or `false`                  |                                                               |
-| &#9745; | Char(char)           | `'A'`                              | needs single quotes otherwise `oscd` will cast it to `String` |
+| &#9744; | Char(char)           |                                    |                                                               |
 | &#9744; | Blob(Vec&#60;u8>)    |                                    |                                                               |
 | &#9744; | Time(OscTime)        |                                    |                                                               |
-| &#9744; | Color(OscColor)      |                                    |                                                               |
+| &#9745; | Color(OscColor)      | `#2F14DF2A`                        | use hexadecimal pattern `#<red><green><blue><alpha>`          |
 | &#9744; | Midi(OscMidiMessage) |                                    |                                                               |
-| &#9744; | Array(OscArray)      |                                    |                                                               |
+| &#9745; | Array(OscArray)      | `[10,20,true]`                     |                                                               |
 | &#9745; | Nil                  | `Nil`                              |                                                               |
 | &#9745; | Inf                  | `Inf`                              |                                                               |
 

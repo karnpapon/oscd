@@ -87,7 +87,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: -- --warn
 
       - name: Run rustdoc lints
         uses: actions-rs/cargo@v1
