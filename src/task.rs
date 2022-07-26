@@ -7,11 +7,14 @@ use std::io::{stdout, Write};
 use std::thread;
 use termion::screen::*;
 
+use super::lexer::{
+  token::{Token, Tokens},
+  Lexer,
+};
 use super::osc;
 use super::parser;
+use super::parser::{Stmt, Literal, Expr};
 use super::prompt;
-use super::lexer::{ Lexer, token::{Token} };
-use super::scanner::*;
 
 pub enum Task {
   Monitor(String),
@@ -56,41 +59,38 @@ pub fn send(port: u16, address: String) {
       .prompt()
       .unwrap();
     let osc_msg_vec = Lexer::lex_tokens(osc_msg.as_bytes()).unwrap();
-     
-    // let osc_msg_vec = osc_msg
-    //   .try_into_args()
-    //   .ok()
-    //   .unwrap()
-    //   .into_iter()
-    //   .collect::<Vec<(String, DataType)>>();
 
-    println!("new parser = {:?}", osc_msg_vec);
+    
+    let tokens = Tokens::new(&osc_msg_vec.1);
+    let (_, stmt) = parser::Parser::parse_tokens(tokens).unwrap();
 
-    if let Some((first, tail)) = osc_msg_vec.1.split_first() {
-      let osc_path = match first { Token::OSCPath(path) => path, Token::Ident(v) => v, _ => "" };
-      if (osc_path) == ":q" { break; }
-      // let argument_msg = tail
-      //     .iter()
-      //     .filter(|x| x.0 == Token::Illegal)
-      //     .map(|x| parser::parse_message(x.clone()))
-      //     .collect::<Vec<OscType>>();
-      println!("tail = {:?}", tail);
-      let argument_msg = tail.iter().map(|x| parser::parse_message(x)).collect::<Vec<OscType>>();
+    // println!("stmtstmtstmt = {:?}", stmt);
+
+    if let Some((first, tail)) = stmt.split_first() {
+      let osc_path = match first {
+        Stmt::ExprStmt(v) => match v { 
+          Expr::LitExpr(vv) => match vv {
+            Literal::OscPathLiteral(path) => path,
+            _ => "no-path-here"
+          }, 
+          _ => "no-path-here"
+        } ,
+        _ => "no-path-here",
+      };
+      if (osc_path) == ":q" {
+        break;
+      }
+      let argument_msg = tail
+        .iter()
+        .map(|x| {
+          match x {
+           Stmt::ExprStmt(v) => parser::parse_message(v),
+           _ => OscType::Nil
+          }
+        })
+        .collect::<Vec<OscType>>();
       send_packet(port, address.clone(), &osc_path, argument_msg);
     }
-
-    // if let Some((first, tail)) = osc_msg_vec.split_first() {
-    //   let osc_path = first.0.clone();
-    //   if osc_path == ":q" {
-    //     break;
-    //   }
-    //   let argument_msg = tail
-    //     .iter()
-    //     .filter(|x| x.0 != "")
-    //     .map(|x| parser::parse_message(x.clone()))
-    //     .collect::<Vec<OscType>>();
-    //   send_packet(port, address.clone(), &osc_path, argument_msg);
-    // }
   });
 
   handler.join().unwrap();
@@ -105,6 +105,6 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<Osc
     .expect("Could not connect to socket at address");
 
   let packet = (osc_path, osc_args);
-  println!("packet = {:?}", packet);
+  // println!("packet = {:?}", packet);
   sender.send(packet).ok();
 }

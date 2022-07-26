@@ -1,137 +1,283 @@
 use regex::Regex;
-use rosc::OscType;
+use rosc::{OscType, OscArray};
 use std::str::FromStr;
 
-use super::lexer::token::{Token};
-use super::scanner::*;
+use nom::branch::*;
+use nom::bytes::complete::take;
+use nom::combinator::{map, opt, verify};
+use nom::error::{Error, ErrorKind};
+use nom::multi::many0;
+use nom::sequence::*;
+use nom::Err;
+use nom::*;
 
-#[derive(PartialEq, Debug)]
-enum Val {
-  I32(i32),
-  I64(i64),
-  F32(f32),
-  F64(f64),
-  Boolean(bool),
-  String(String),
-  Char(char),
-  Nil,
-  Inf,
-  // U8(u8)
-}
+use super::lexer::token::{Token, Tokens};
+use std::result::Result::*;
 
-// TODO: find proper name
-// enum Val2 {
-//   U8(u8),
-//   U32(u32)
+// #[derive(PartialEq, Debug)]
+// enum Val {
+//   I32(i32),
+//   I64(i64),
+//   F32(f32),
+//   F64(f64),
+//   Boolean(bool),
+//   String(String),
+//   Char(char),
+//   Nil,
+//   Inf,
+//   // U8(u8)
 // }
 
-// TODO: ? use macros
-impl FromStr for Val {
-  type Err = &'static str;
-  fn from_str(s: &str) -> Result<Self, Self::Err> {
-    match (
-      s == "Nil",
-      s == "Inf",
-      s.parse::<i32>(),
-      s.parse::<i64>(),
-      s.parse::<f32>(),
-      s.parse::<f64>(),
-      s.parse::<char>(),
-      s.parse::<bool>(),
-      s.parse::<String>(),
-    ) {
-      (true, _, _, _, _, _, _, _, _) => Ok(Val::Nil),
-      (_, true, _, _, _, _, _, _, _) => Ok(Val::Inf),
-      (_, _, Ok(i), _, _, _, _, _, _) => Ok(Val::I32(i)),
-      (_, _, _, Ok(i), _, _, _, _, _) => Ok(Val::I64(i)),
-      (_, _, _, _, Ok(f), _, _, _, _) => Ok(Val::F32(f)),
-      (_, _, _, _, _, Ok(f), _, _, _) => Ok(Val::F64(f)),
-      (_, _, _, _, _, _, Ok(c), _, _) => Ok(Val::Char(c)),
-      (_, _, _, _, _, _, _, Ok(b), _) => Ok(Val::Boolean(b)),
-      (_, _, _, _, _, _, _, _, Ok(st)) => Ok(Val::String(st)),
-      _ => Err("Unrecognized type."),
+#[derive(PartialEq, Debug, Clone)]
+pub enum Stmt {
+  ExprStmt(Expr),
+  ReturnStmt(Expr),
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum Expr {
+  IdentExpr(Ident),
+  LitExpr(Literal),
+  InfixExpr(Infix, Box<Expr>, Box<Expr>),
+  ArrayExpr(Vec<Expr>),
+  IndexExpr { array: Box<Expr>, index: Box<Expr> },
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum Literal {
+  IntLiteral(i32),
+  FloatLiteral(f32),
+  BoolLiteral(bool),
+  StringLiteral(String),
+  OscPathLiteral(String),
+}
+
+#[derive(PartialEq, Debug, Eq, Clone)]
+pub struct Ident(pub String);
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum Infix {
+  Plus,
+  Minus,
+  Divide,
+  Multiply,
+  Equal,
+  NotEqual,
+  GreaterThanEqual,
+  LessThanEqual,
+  GreaterThan,
+  LessThan,
+}
+
+#[derive(PartialEq, PartialOrd, Debug, Clone)]
+pub enum Precedence {
+  PLowest,
+  PEquals,
+  PLessGreater,
+  PSum,
+  PProduct,
+  PCall,
+  PIndex,
+}
+
+pub type Program = Vec<Stmt>;
+
+pub struct Parser;
+
+impl Parser {
+  pub fn parse_tokens(tokens: Tokens) -> IResult<Tokens, Program> {
+    parse_program(tokens)
+  }
+}
+
+fn parse_program(input: Tokens) -> IResult<Tokens, Program> {
+  terminated(many0(parse_stmt), eof_tag)(input)
+}
+
+fn parse_stmt(input: Tokens) -> IResult<Tokens, Stmt> {
+  alt((parse_return_stmt, parse_expr_stmt))(input)
+}
+
+fn parse_return_stmt(input: Tokens) -> IResult<Tokens, Stmt> {
+  map(
+    delimited(return_tag, parse_expr, opt(semicolon_tag)),
+    Stmt::ReturnStmt,
+  )(input)
+}
+
+fn parse_expr_stmt(input: Tokens) -> IResult<Tokens, Stmt> {
+  map(terminated(parse_expr, opt(semicolon_tag)), |expr| {
+    Stmt::ExprStmt(expr)
+  })(input)
+}
+
+macro_rules! tag_token (
+  ($func_name:ident, $tag: expr) => (
+      fn $func_name(tokens: Tokens) -> IResult<Tokens, Tokens> {
+          verify(take(1usize), |t: &Tokens| t.tok[0] == $tag)(tokens)
+      }
+  )
+);
+
+fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
+  // println!("parse_literal {:?}", input);
+  let (i1, t1) = take(1usize)(input)?;
+  // println!("take 1usize i1={:?} | t1={:?}", i1, t1);
+  if t1.tok.is_empty() {
+    Err(Err::Error(Error::new(input, ErrorKind::Tag)))
+  } else {
+    match t1.tok[0].clone() {
+      Token::IntLiteral(name) => Ok((i1, Literal::IntLiteral(name))),
+      Token::StringLiteral(s) => Ok((i1, Literal::StringLiteral(s))),
+      Token::FloatLiteral(s) => Ok((i1, Literal::FloatLiteral(s))),
+      Token::BoolLiteral(b) => Ok((i1, Literal::BoolLiteral(b))),
+      Token::OSCPath(b) => Ok((i1, Literal::OscPathLiteral(b))),
+      _ => Err(Err::Error(Error::new(input, ErrorKind::Tag))),
+    }
+  }
+}
+fn parse_ident(input: Tokens) -> IResult<Tokens, Ident> {
+  let (i1, t1) = take(1usize)(input)?;
+  if t1.tok.is_empty() {
+    Err(Err::Error(Error::new(input, ErrorKind::Tag)))
+  } else {
+    match t1.tok[0].clone() {
+      Token::Ident(name) => Ok((i1, Ident(name))),
+      _ => Err(Err::Error(Error::new(input, ErrorKind::Tag))),
     }
   }
 }
 
-// impl FromStr for Val2 {
-//   type Err = &'static str;
-//   fn from_str(s: &str) -> Result<Self, Self::Err> {
-//     match (
-//       s.parse::<u8>(),
-//       s.parse::<u32>(),
-//     ) {
-//       (Ok(v), _,) => Ok(Val2::U8(v)),
-//       (_, Ok(v),) => Ok(Val2::U32(v)),
-//       _ => Err("Unrecognized type."),
-//     }
-//   }
-// }
-
-pub fn parse_message(message: &Token) -> OscType {
-  // match message {
-  //   (m, DataType::Scalar) => parse_scalar(m),
-  //   (m, DataType::Compound) => parse_compound(m),
-  // }
-
-  match message {
-    Token::Ident(val) | Token::StringLiteral(val) => OscType::String(val.clone()),
-    Token::IntLiteral(val) => OscType::Int(val.clone()),
-    Token::FloatLiteral(val) => OscType::Float(val.clone()),
-    Token::BoolLiteral(val) => OscType::Bool(val.clone()),
-    _ => OscType::Nil 
+fn infix_op(t: &Token) -> (Precedence, Option<Infix>) {
+  match *t {
+    Token::LBracket => (Precedence::PIndex, None),
+    _ => (Precedence::PLowest, None),
   }
 }
 
-// fn parse_compound(message: String) -> OscType {
-//   let osc_msg_vec = message
-//     .try_into_compound_args()
-//     .ok()
-//     .unwrap()
-//     .into_iter()
-//     .collect::<Vec<(String, DataType)>>();
+tag_token!(return_tag, Token::Return);
+tag_token!(semicolon_tag, Token::SemiColon);
+tag_token!(lbracket_tag, Token::LBracket);
+tag_token!(rbracket_tag, Token::RBracket);
+tag_token!(comma_tag, Token::Comma);
+tag_token!(eof_tag, Token::EOF);
 
-//   let argument_msg = osc_msg_vec
-//     .iter()
-//     .map(|x| parse_message(x.clone()))
-//     .collect();
+fn parse_lit_expr(input: Tokens) -> IResult<Tokens, Expr> {
+  map(parse_literal, Expr::LitExpr)(input)
+}
 
-//   // println!("osc_msg_vec = {:?}", osc_msg_vec);
+fn parse_ident_expr(input: Tokens) -> IResult<Tokens, Expr> {
+  map(parse_ident, Expr::IdentExpr)(input)
+}
 
-//   OscType::Array(argument_msg)
-// }
+pub fn parse_atom_expr(input: Tokens) -> IResult<Tokens, Expr> {
+  alt((parse_lit_expr, parse_ident_expr, parse_array_expr))(input)
+}
 
-fn parse_scalar(message: String) -> OscType {
-  // handle numeric literals type conversion.
-  // eg.`1.234_f64` is equivalent to `1.234 as f64`
-  let number_types = Regex::new(r"(_i32)$|(_i64)$|(_f32)$|(_f64)$").unwrap();
-  if number_types.is_match(&message) {
-    let m = &message;
-    let num: Vec<_> = Regex::new(r"[_]").unwrap().split(m).collect();
-    return match num[1] {
-      "i32" => OscType::Int(num[0].parse::<i32>().unwrap()),
-      "i64" => OscType::Long(num[0].parse::<i64>().unwrap()),
-      "f32" => OscType::Float(num[0].parse::<f32>().unwrap()),
-      "f64" => OscType::Double(num[0].parse::<f64>().unwrap()),
-      _ => OscType::Nil,
-    };
+pub fn parse_expr(input: Tokens) -> IResult<Tokens, Expr> {
+  parse_pratt_expr(input, Precedence::PLowest)
+}
+
+fn parse_pratt_expr(input: Tokens, precedence: Precedence) -> IResult<Tokens, Expr> {
+  let (i1, left) = parse_atom_expr(input)?;
+  go_parse_pratt_expr(i1, precedence, left)
+}
+
+fn go_parse_pratt_expr(input: Tokens, precedence: Precedence, left: Expr) -> IResult<Tokens, Expr> {
+  let (i1, t1) = take(1usize)(input)?;
+  // println!("go_parse_pratt_expr input {:?}", input);
+  if t1.tok.is_empty() {
+    Ok((i1, left))
+  } else {
+    Ok((input, left))
   }
+}
 
-  let parsed = message.parse::<Val>().unwrap();
-  match parsed {
-    Val::I32(val) => OscType::Int(val),
-    Val::I64(val) => OscType::Long(val),
-    Val::F32(val) => OscType::Float(val),
-    Val::F64(val) => OscType::Double(val),
-    Val::Char(val) => OscType::Char(val),
-    Val::Boolean(val) => OscType::Bool(val),
-    Val::String(val) => OscType::String(val),
-    Val::Nil => OscType::Nil,
-    Val::Inf => OscType::Inf,
+fn parse_infix_expr(input: Tokens, left: Expr) -> IResult<Tokens, Expr> {
+  let (i1, t1) = take(1usize)(input)?;
+  if t1.tok.is_empty() {
+    Err(Err::Error(error_position!(input, ErrorKind::Tag)))
+  } else {
+    let next = &t1.tok[0];
+    let (precedence, maybe_op) = infix_op(next);
+    match maybe_op {
+      None => Err(Err::Error(error_position!(input, ErrorKind::Tag))),
+      Some(op) => {
+        let (i2, right) = parse_pratt_expr(i1, precedence)?;
+        Ok((i2, Expr::InfixExpr(op, Box::new(left), Box::new(right))))
+      }
+    }
   }
+}
+
+fn parse_index_expr(input: Tokens, arr: Expr) -> IResult<Tokens, Expr> {
+  map(delimited(lbracket_tag, parse_expr, rbracket_tag), |idx| {
+    Expr::IndexExpr {
+      array: Box::new(arr.clone()),
+      index: Box::new(idx),
+    }
+  })(input)
+}
+
+fn parse_exprs(input: Tokens) -> IResult<Tokens, Vec<Expr>> {
+  map(
+    pair(parse_expr, many0(parse_comma_exprs)),
+    |(first, second)| [&vec![first][..], &second[..]].concat(),
+  )(input)
+}
+
+fn parse_comma_exprs(input: Tokens) -> IResult<Tokens, Expr> {
+  preceded(comma_tag, parse_expr)(input)
+}
+
+fn empty_boxed_vec(input: Tokens) -> IResult<Tokens, Vec<Expr>> {
+  Ok((input, vec![]))
+}
+
+// TODO:
+pub fn parse_array_expr(input: Tokens) -> IResult<Tokens, Expr> {
+  map(
+    delimited(
+      lbracket_tag,
+      alt((parse_exprs, empty_boxed_vec)),
+      rbracket_tag,
+    ),
+    Expr::ArrayExpr,
+  )(input)
+}
+
+pub fn parse_message(message: &Expr) -> OscType {
+  match message {
+    Expr::IdentExpr(v) => parse_identity(v),
+    Expr::LitExpr(v) => parse_scalar(v),
+    Expr::ArrayExpr(v) => parse_compound(v),
+    _ => OscType::Nil
+  }
+}
+
+fn parse_identity(message: &Ident) -> OscType{
+  match message {
+    Ident(val) => OscType::String(val.clone()),
+    _ => OscType::Nil
+  }
+}
+
+fn parse_scalar(message: &Literal) -> OscType{
+  match message {
+    Literal::IntLiteral(val) => OscType::Int(val.clone()),
+    Literal::FloatLiteral(val) => OscType::Float(val.clone()),
+    Literal::BoolLiteral(val) => OscType::Bool(val.clone()),
+    Literal::StringLiteral(val) => OscType::String(val.clone()),
+    Literal::OscPathLiteral(val) => OscType::String(val.clone()),
+  }
+}
+
+fn parse_compound(message: &Vec<Expr>) -> OscType{
+  let arr = message.into_iter().map(|x| parse_message(x)).collect::<Vec<OscType>>();
+  let aa = OscArray::from_iter(arr);
+  OscType::Array(aa)
 }
 
 // test
 // /s_new "default after whitespace" 1002 'A' 'TbcS' freq 12.4533 -12 1.234_f64 [12 20 15]
-
-// /s_new "default after whitespace" 1002 TbcS freq 12.4533 -12 -13.453
+// /s_new "default after whitespace" 1002 TbcS freq 12.4533 -12 -13.453 [12,20,15]

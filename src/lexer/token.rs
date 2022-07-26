@@ -1,13 +1,8 @@
 use nom::{
-  IResult,
-  InputLength,
-  InputTake,
-  InputIter,
-  Needed,
-  Slice,
   bytes::complete::{tag, take_while_m_n},
   combinator::map_res,
-  sequence::tuple
+  sequence::tuple,
+  IResult, InputIter, InputLength, InputTake, Needed, Slice,
 };
 use std::iter::Enumerate;
 use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
@@ -17,51 +12,55 @@ pub enum Token {
   Illegal,
   EOF,
 
+  SemiColon,
   OSCPath(String),
-  
+
   Ident(String),
   StringLiteral(String),
   IntLiteral(i32),
+  Long(i64),
   FloatLiteral(f32),
+  Double(f64),
   BoolLiteral(bool),
   Char(char),
-  
+
   Comma,
- 
+
+  Return,
+
   LBracket,
   RBracket,
 
-  Color,
+  // Color,
+  Nil,
+  Inf,
 }
 
-#[derive(Debug,PartialEq)]
-pub struct Color {
-  pub red:   u8,
-  pub green: u8,
-  pub blue:  u8,
-}
+// #[derive(Debug, PartialEq)]
+// pub struct Color {
+//   pub red: u8,
+//   pub green: u8,
+//   pub blue: u8,
+// }
 
-fn from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
-  u8::from_str_radix(input, 16)
-}
+// fn from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
+//   u8::from_str_radix(input, 16)
+// }
 
-fn is_hex_digit(c: char) -> bool {
-  c.is_digit(16)
-}
+// fn is_hex_digit(c: char) -> bool {
+//   c.is_digit(16)
+// }
 
-fn hex_primary(input: &str) -> IResult<&str, u8> {
-  map_res(
-    take_while_m_n(2, 2, is_hex_digit),
-    from_hex
-  )(input)
-}
+// fn hex_primary(input: &str) -> IResult<&str, u8> {
+//   map_res(take_while_m_n(2, 2, is_hex_digit), from_hex)(input)
+// }
 
-pub fn hex_color(input: &str) -> IResult<&str, Color> {
-  let (input, _) = tag("#")(input)?;
-  let (input, (red, green, blue)) = tuple((hex_primary, hex_primary, hex_primary))(input)?;
+// pub fn hex_color(input: &str) -> IResult<&str, Color> {
+//   let (input, _) = tag("#")(input)?;
+//   let (input, (red, green, blue)) = tuple((hex_primary, hex_primary, hex_primary))(input)?;
 
-  Ok((input, Color { red, green, blue }))
-}
+//   Ok((input, Color { red, green, blue }))
+// }
 
 // #[test]
 // fn parse_color() {

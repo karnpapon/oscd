@@ -4,7 +4,6 @@ mod lexer;
 mod osc;
 mod parser;
 mod prompt;
-mod scanner;
 mod task;
 
 use prompt::prompt;

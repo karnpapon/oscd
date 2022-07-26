@@ -1,19 +1,21 @@
 use nom::branch::*;
-use nom::bytes::complete::{tag, take, take_while1};
-use nom::character::complete::{char as char1,anychar, alpha1, alphanumeric1, digit1, multispace0};
+use nom::bytes::complete::{is_not, tag, take, take_while1};
+use nom::character::complete::{
+  alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0,
+};
 use nom::character::{is_alphabetic, is_alphanumeric};
-use nom::combinator::{map, map_res, opt, recognize};
-use nom::multi::many0;
+use nom::combinator::{map, map_parser, map_res, opt, recognize};
+use nom::error::ErrorKind;
+use nom::multi::{many0, separated_list0};
 use nom::sequence::{delimited, pair, tuple};
 use nom::*;
-use nom::error::ErrorKind;
 
 use std::str;
 use std::str::FromStr;
 use std::str::Utf8Error;
 
 pub mod token;
-use token::{Token};
+use token::Token;
 
 macro_rules! syntax {
   ($func_name: ident, $tag_string: literal, $output_token: expr) => {
@@ -79,6 +81,13 @@ fn lex_string(input: &[u8]) -> IResult<&[u8], Token> {
   map(string, Token::StringLiteral)(input)
 }
 
+// fn lex_arr(input: &[u8]) -> IResult<&[u8], Vec<String>> {
+//   separated_list0(
+//     char1(','),
+//     map_res( is_not(", \t"))
+//   )(input)
+// }
+
 fn lex_char(input: &[u8]) -> IResult<&[u8], Token> {
   // let method = take_while1(is_alphabetic);
   // let space = take_while1(|c| c == b' ');
@@ -87,9 +96,7 @@ fn lex_char(input: &[u8]) -> IResult<&[u8], Token> {
   // let float_str = map_res(char1, str::from_utf8);
   // println!("inp method = {:?}", float_str);
 
-  map(|inp| { 
-    char1('A')(inp)
-  }, Token::Char)(input)
+  map(|inp| char1('A')(inp), Token::Char)(input)
 }
 
 // Reserved or ident
@@ -104,12 +111,10 @@ fn lex_reserved_ident(input: &[u8]) -> IResult<&[u8], Token> {
       c.map(|syntax| match syntax {
         "true" => Token::BoolLiteral(true),
         "false" => Token::BoolLiteral(false),
-        _ => { 
-          match syntax.chars().nth(0).unwrap() {
-            '/' => Token::OSCPath(syntax.to_string()),
-            _ => Token::Ident(syntax.to_string()) 
-          }
-        }
+        _ => match syntax.chars().nth(0).unwrap() {
+          '/' => Token::OSCPath(syntax.to_string()),
+          _ => Token::Ident(syntax.to_string()),
+        },
       })
     },
   )(input)
@@ -128,14 +133,14 @@ fn lex_integer(input: &[u8]) -> IResult<&[u8], Token> {
         .and_then(|s| if s[0] == b'-' { Some(-1i32) } else { None })
         .unwrap_or(1i32)
         * value;
-        Token::IntLiteral(s)
+      Token::IntLiteral(s)
     },
   )(input)
 }
 
 fn unsigned_int(input: &[u8]) -> IResult<&[u8], i32> {
   let float_str = map_res(digit1, str::from_utf8);
-  map_res(float_str, FromStr::from_str)(input) 
+  map_res(float_str, FromStr::from_str)(input)
 }
 
 fn unsigned_float(input: &[u8]) -> IResult<&[u8], f32> {
@@ -155,7 +160,7 @@ fn lex_float(input: &[u8]) -> IResult<&[u8], Token> {
         .and_then(|s| if s[0] == b'-' { Some(-1f32) } else { None })
         .unwrap_or(1f32)
         * value;
-        Token::FloatLiteral(s)
+      Token::FloatLiteral(s)
     },
   )(input)
 }
