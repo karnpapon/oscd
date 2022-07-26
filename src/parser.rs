@@ -1,7 +1,3 @@
-use regex::Regex;
-use rosc::{OscType, OscArray};
-use std::str::FromStr;
-
 use nom::branch::*;
 use nom::bytes::complete::take;
 use nom::combinator::{map, opt, verify};
@@ -10,23 +6,10 @@ use nom::multi::many0;
 use nom::sequence::*;
 use nom::Err;
 use nom::*;
+use rosc::{OscArray, OscType};
 
 use super::lexer::token::{Token, Tokens};
 use std::result::Result::*;
-
-// #[derive(PartialEq, Debug)]
-// enum Val {
-//   I32(i32),
-//   I64(i64),
-//   F32(f32),
-//   F64(f64),
-//   Boolean(bool),
-//   String(String),
-//   Char(char),
-//   Nil,
-//   Inf,
-//   // U8(u8)
-// }
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Stmt {
@@ -38,9 +21,7 @@ pub enum Stmt {
 pub enum Expr {
   IdentExpr(Ident),
   LitExpr(Literal),
-  InfixExpr(Infix, Box<Expr>, Box<Expr>),
   ArrayExpr(Vec<Expr>),
-  IndexExpr { array: Box<Expr>, index: Box<Expr> },
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -54,31 +35,6 @@ pub enum Literal {
 
 #[derive(PartialEq, Debug, Eq, Clone)]
 pub struct Ident(pub String);
-
-#[derive(PartialEq, Debug, Clone)]
-pub enum Infix {
-  Plus,
-  Minus,
-  Divide,
-  Multiply,
-  Equal,
-  NotEqual,
-  GreaterThanEqual,
-  LessThanEqual,
-  GreaterThan,
-  LessThan,
-}
-
-#[derive(PartialEq, PartialOrd, Debug, Clone)]
-pub enum Precedence {
-  PLowest,
-  PEquals,
-  PLessGreater,
-  PSum,
-  PProduct,
-  PCall,
-  PIndex,
-}
 
 pub type Program = Vec<Stmt>;
 
@@ -120,9 +76,7 @@ macro_rules! tag_token (
 );
 
 fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
-  // println!("parse_literal {:?}", input);
   let (i1, t1) = take(1usize)(input)?;
-  // println!("take 1usize i1={:?} | t1={:?}", i1, t1);
   if t1.tok.is_empty() {
     Err(Err::Error(Error::new(input, ErrorKind::Tag)))
   } else {
@@ -148,13 +102,6 @@ fn parse_ident(input: Tokens) -> IResult<Tokens, Ident> {
   }
 }
 
-fn infix_op(t: &Token) -> (Precedence, Option<Infix>) {
-  match *t {
-    Token::LBracket => (Precedence::PIndex, None),
-    _ => (Precedence::PLowest, None),
-  }
-}
-
 tag_token!(return_tag, Token::Return);
 tag_token!(semicolon_tag, Token::SemiColon);
 tag_token!(lbracket_tag, Token::LBracket);
@@ -175,48 +122,21 @@ pub fn parse_atom_expr(input: Tokens) -> IResult<Tokens, Expr> {
 }
 
 pub fn parse_expr(input: Tokens) -> IResult<Tokens, Expr> {
-  parse_pratt_expr(input, Precedence::PLowest)
+  parse_pratt_expr(input)
 }
 
-fn parse_pratt_expr(input: Tokens, precedence: Precedence) -> IResult<Tokens, Expr> {
+fn parse_pratt_expr(input: Tokens) -> IResult<Tokens, Expr> {
   let (i1, left) = parse_atom_expr(input)?;
-  go_parse_pratt_expr(i1, precedence, left)
+  go_parse_pratt_expr(i1, left)
 }
 
-fn go_parse_pratt_expr(input: Tokens, precedence: Precedence, left: Expr) -> IResult<Tokens, Expr> {
+fn go_parse_pratt_expr(input: Tokens, left: Expr) -> IResult<Tokens, Expr> {
   let (i1, t1) = take(1usize)(input)?;
-  // println!("go_parse_pratt_expr input {:?}", input);
   if t1.tok.is_empty() {
     Ok((i1, left))
   } else {
     Ok((input, left))
   }
-}
-
-fn parse_infix_expr(input: Tokens, left: Expr) -> IResult<Tokens, Expr> {
-  let (i1, t1) = take(1usize)(input)?;
-  if t1.tok.is_empty() {
-    Err(Err::Error(error_position!(input, ErrorKind::Tag)))
-  } else {
-    let next = &t1.tok[0];
-    let (precedence, maybe_op) = infix_op(next);
-    match maybe_op {
-      None => Err(Err::Error(error_position!(input, ErrorKind::Tag))),
-      Some(op) => {
-        let (i2, right) = parse_pratt_expr(i1, precedence)?;
-        Ok((i2, Expr::InfixExpr(op, Box::new(left), Box::new(right))))
-      }
-    }
-  }
-}
-
-fn parse_index_expr(input: Tokens, arr: Expr) -> IResult<Tokens, Expr> {
-  map(delimited(lbracket_tag, parse_expr, rbracket_tag), |idx| {
-    Expr::IndexExpr {
-      array: Box::new(arr.clone()),
-      index: Box::new(idx),
-    }
-  })(input)
 }
 
 fn parse_exprs(input: Tokens) -> IResult<Tokens, Vec<Expr>> {
@@ -234,7 +154,6 @@ fn empty_boxed_vec(input: Tokens) -> IResult<Tokens, Vec<Expr>> {
   Ok((input, vec![]))
 }
 
-// TODO:
 pub fn parse_array_expr(input: Tokens) -> IResult<Tokens, Expr> {
   map(
     delimited(
@@ -251,18 +170,18 @@ pub fn parse_message(message: &Expr) -> OscType {
     Expr::IdentExpr(v) => parse_identity(v),
     Expr::LitExpr(v) => parse_scalar(v),
     Expr::ArrayExpr(v) => parse_compound(v),
-    _ => OscType::Nil
+    _ => OscType::Nil,
   }
 }
 
-fn parse_identity(message: &Ident) -> OscType{
+fn parse_identity(message: &Ident) -> OscType {
   match message {
     Ident(val) => OscType::String(val.clone()),
-    _ => OscType::Nil
+    _ => OscType::Nil,
   }
 }
 
-fn parse_scalar(message: &Literal) -> OscType{
+fn parse_scalar(message: &Literal) -> OscType {
   match message {
     Literal::IntLiteral(val) => OscType::Int(val.clone()),
     Literal::FloatLiteral(val) => OscType::Float(val.clone()),
@@ -272,8 +191,11 @@ fn parse_scalar(message: &Literal) -> OscType{
   }
 }
 
-fn parse_compound(message: &Vec<Expr>) -> OscType{
-  let arr = message.into_iter().map(|x| parse_message(x)).collect::<Vec<OscType>>();
+fn parse_compound(message: &Vec<Expr>) -> OscType {
+  let arr = message
+    .into_iter()
+    .map(|x| parse_message(x))
+    .collect::<Vec<OscType>>();
   let aa = OscArray::from_iter(arr);
   OscType::Array(aa)
 }

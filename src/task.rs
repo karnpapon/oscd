@@ -13,7 +13,7 @@ use super::lexer::{
 };
 use super::osc;
 use super::parser;
-use super::parser::{Stmt, Literal, Expr};
+use super::parser::{Expr, Literal, Stmt};
 use super::prompt;
 
 pub enum Task {
@@ -60,7 +60,6 @@ pub fn send(port: u16, address: String) {
       .unwrap();
     let osc_msg_vec = Lexer::lex_tokens(osc_msg.as_bytes()).unwrap();
 
-    
     let tokens = Tokens::new(&osc_msg_vec.1);
     let (_, stmt) = parser::Parser::parse_tokens(tokens).unwrap();
 
@@ -68,13 +67,13 @@ pub fn send(port: u16, address: String) {
 
     if let Some((first, tail)) = stmt.split_first() {
       let osc_path = match first {
-        Stmt::ExprStmt(v) => match v { 
+        Stmt::ExprStmt(v) => match v {
           Expr::LitExpr(vv) => match vv {
             Literal::OscPathLiteral(path) => path,
-            _ => "no-path-here"
-          }, 
-          _ => "no-path-here"
-        } ,
+            _ => "no-path-here",
+          },
+          _ => "no-path-here",
+        },
         _ => "no-path-here",
       };
       if (osc_path) == ":q" {
@@ -82,11 +81,9 @@ pub fn send(port: u16, address: String) {
       }
       let argument_msg = tail
         .iter()
-        .map(|x| {
-          match x {
-           Stmt::ExprStmt(v) => parser::parse_message(v),
-           _ => OscType::Nil
-          }
+        .map(|x| match x {
+          Stmt::ExprStmt(v) => parser::parse_message(v),
+          _ => OscType::Nil,
         })
         .collect::<Vec<OscType>>();
       send_packet(port, address.clone(), &osc_path, argument_msg);
