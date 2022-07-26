@@ -53,6 +53,7 @@ pub fn send(port: u16, address: String) {
   screen.flush().unwrap();
 
   let handler = thread::spawn(move || loop {
+    // loop {
     let msg = Text::new("");
     let osc_msg = msg
       .with_render_config(prompt::get_render_config())
@@ -63,18 +64,12 @@ pub fn send(port: u16, address: String) {
     let tokens = Tokens::new(&osc_msg_vec.1);
     let (_, stmt) = parser::Parser::parse_tokens(tokens).unwrap();
 
-    // println!("stmtstmtstmt = {:?}", stmt);
+    println!("stmtstmtstmt = {:?}", stmt);
 
     if let Some((first, tail)) = stmt.split_first() {
       let osc_path = match first {
-        Stmt::ExprStmt(v) => match v {
-          Expr::LitExpr(vv) => match vv {
-            Literal::OscPathLiteral(path) => path,
-            _ => "no-path-here",
-          },
-          _ => "no-path-here",
-        },
-        _ => "no-path-here",
+        Stmt::ExprStmt(Expr::Lit(Literal::OscPath(path))) => path,
+        _ => "no-path-here"
       };
       if (osc_path) == ":q" {
         break;
@@ -86,8 +81,9 @@ pub fn send(port: u16, address: String) {
           _ => OscType::Nil,
         })
         .collect::<Vec<OscType>>();
-      send_packet(port, address.clone(), &osc_path, argument_msg);
+      send_packet(port, address.clone(), osc_path, argument_msg);
     }
+  // }
   });
 
   handler.join().unwrap();
@@ -102,6 +98,6 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<Osc
     .expect("Could not connect to socket at address");
 
   let packet = (osc_path, osc_args);
-  // println!("packet = {:?}", packet);
+  println!("packet = {:#?}", packet);
   sender.send(packet).ok();
 }

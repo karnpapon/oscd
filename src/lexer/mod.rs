@@ -1,12 +1,11 @@
 use nom::branch::*;
-use nom::bytes::complete::{is_not, tag, take, take_while1};
+use nom::bytes::complete::{tag, take, take_while_m_n};
 use nom::character::complete::{
-  alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0,
+  alpha1, alphanumeric1, char as char1, digit1, multispace0,
 };
 use nom::character::{is_alphabetic, is_alphanumeric};
-use nom::combinator::{map, map_parser, map_res, opt, recognize};
-use nom::error::ErrorKind;
-use nom::multi::{many0, separated_list0};
+use nom::combinator::{map, map_res, opt, recognize};
+use nom::multi::{many0};
 use nom::sequence::{delimited, pair, tuple};
 use nom::*;
 
@@ -15,7 +14,7 @@ use std::str::FromStr;
 use std::str::Utf8Error;
 
 pub mod token;
-use token::Token;
+use token::{Token, Color};
 
 macro_rules! syntax {
   ($func_name: ident, $tag_string: literal, $output_token: expr) => {
@@ -99,19 +98,21 @@ fn lex_char(input: &[u8]) -> IResult<&[u8], Token> {
   map(|inp| char1('A')(inp), Token::Char)(input)
 }
 
-// Reserved or ident
+// Reserved or ident (eg. Nil, Inf, OSCpath)
 fn lex_reserved_ident(input: &[u8]) -> IResult<&[u8], Token> {
   map_res(
     recognize(pair(
       alt((alpha1, tag("_"), tag("/"), tag(":"))),
-      many0(alt((alphanumeric1, tag("_"), tag("/")))),
+      many0(alt((alphanumeric1, tag("_"), tag("/"), tag(":")))),
     )),
     |s| {
       let c = complete_byte_slice_str_from_utf8(s);
       c.map(|syntax| match syntax {
         "true" => Token::BoolLiteral(true),
         "false" => Token::BoolLiteral(false),
-        _ => match syntax.chars().nth(0).unwrap() {
+        "Nil" => Token::Nil,
+        "Inf" => Token::Inf,
+        _ => match syntax.chars().next().unwrap() {
           '/' => Token::OSCPath(syntax.to_string()),
           _ => Token::Ident(syntax.to_string()),
         },
@@ -169,12 +170,55 @@ fn lex_illegal(input: &[u8]) -> IResult<&[u8], Token> {
   map(take(1usize), |_| Token::Illegal)(input)
 }
 
+// Token::Color
+// fn from_hex(input: &[u8]) -> Result<u8, std::num::ParseIntError> {
+//   let inp = str::from_utf8(input).unwrap();
+//   u8::from_str_radix(inp, 16)
+// }
+
+// fn is_hex_digit(c: &[u8]) -> bool {
+//   let cc = std::str::from_utf8(c).unwrap().to_owned().chars().next().unwrap();
+//   cc.is_digit(16)
+// }
+
+fn from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
+  let hex = u8::from_str_radix(input, 16);
+  hex
+}
+
+fn is_hex_digit(c: char) -> bool {
+  // c.is_digit(16)
+  c.is_ascii_hexdigit()
+}
+
+fn hex_primary(input: &str) -> IResult<&str, u8> {
+  map_res(
+    take_while_m_n(2, 2, is_hex_digit),
+    from_hex
+  )(input)
+}
+
+pub fn lex_color(input: &[u8]) -> IResult<&[u8], Token> {
+  let (_input, _) = tag("#")(input)?;
+  let (__input, (red, green, blue, alpha)) = tuple((
+    hex_primary, 
+    hex_primary, 
+    hex_primary, 
+    hex_primary
+  ))(std::str::from_utf8(_input).unwrap()).expect("cannot parse color arg");
+  let col = Color { red, green, blue, alpha};
+  Ok((__input.as_bytes(), Token::Color(col) ))
+}
+
+// -------------------
+
 fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
   alt((
     lex_punctuations,
     lex_char,
     lex_string,
     lex_reserved_ident,
+    lex_color,
     lex_float,
     lex_integer,
     lex_illegal,
