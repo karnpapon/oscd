@@ -164,7 +164,6 @@ pub fn parse_message(message: &Expr) -> OscType {
     Expr::Ident(v) => parse_identity(v),
     Expr::Lit(v) => parse_scalar(v),
     Expr::Array(v) => parse_compound(v),
-    _ => OscType::Nil,
   }
 }
 
@@ -189,7 +188,7 @@ fn parse_scalar(message: &Literal) -> OscType {
   }
 }
 
-fn parse_compound(message: &Vec<Expr>) -> OscType {
+fn parse_compound(message: &[Expr]) -> OscType {
   let arr = message
     .iter()
     .map(parse_message)

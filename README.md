@@ -34,12 +34,12 @@ It has two simple features:
 | status  | types                | example                            | notes                                                         |
 |---------|----------------------|------------------------------------|---------------------------------------------------------------|
 | &#9745; | Int(i32)             | `1234`                             |                                                               |
-| &#9744; | Long(i64)            | `xxxxxxxx`                         |                                                               |
+| &#9744; | Long(i64)            |                                    |                                                               |
 | &#9745; | Float(f32)           | `1234.32`                          |                                                               |
-| &#9744; | Double(f64)          | `xxxxxxxxxxx`                      |                                                               |
+| &#9744; | Double(f64)          |                                    |                                                               |
 | &#9745; | String(String)       | `str_no_space`, `"str with space"` |                                                               |
 | &#9745; | Bool(bool)           | `true` or `false`                  |                                                               |
-| &#9745; | Char(char)           | `'A'`                              | needs single quotes otherwise `oscd` will cast it to `String` |
+| &#9744; | Char(char)           |                                    |                                                               |
 | &#9744; | Blob(Vec&#60;u8>)    |                                    |                                                               |
 | &#9744; | Time(OscTime)        |                                    |                                                               |
 | &#9745; | Color(OscColor)      | `#2F14DF2A`                        | use hexadecimal pattern `#<red><green><blue><alpha>`          |

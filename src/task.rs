@@ -13,7 +13,7 @@ use super::lexer::{
 };
 use super::osc;
 use super::parser;
-use super::parser::{Expr, Literal, Stmt};
+use super::parser::{Expr, Literal, Stmt, Ident};
 use super::prompt;
 
 pub enum Task {
@@ -64,12 +64,17 @@ pub fn send(port: u16, address: String) {
     let tokens = Tokens::new(&osc_msg_vec.1);
     let (_, stmt) = parser::Parser::parse_tokens(tokens).unwrap();
 
-    println!("stmtstmtstmt = {:?}", stmt);
+    // println!("stmtstmtstmt = {:?}", stmt);
 
     if let Some((first, tail)) = stmt.split_first() {
       let osc_path = match first {
-        Stmt::ExprStmt(Expr::Lit(Literal::OscPath(path))) => path,
-        _ => "no-path-here"
+        Stmt::ExprStmt(stmt) => {
+          match stmt {
+            Expr::Lit(Literal::OscPath(path)) => path,
+            Expr::Ident(Ident(val)) => val,
+            _ => "/osc/adress/is/needed" 
+          }
+        },
       };
       if (osc_path) == ":q" {
         break;
@@ -78,7 +83,6 @@ pub fn send(port: u16, address: String) {
         .iter()
         .map(|x| match x {
           Stmt::ExprStmt(v) => parser::parse_message(v),
-          _ => OscType::Nil,
         })
         .collect::<Vec<OscType>>();
       send_packet(port, address.clone(), osc_path, argument_msg);

@@ -170,24 +170,12 @@ fn lex_illegal(input: &[u8]) -> IResult<&[u8], Token> {
   map(take(1usize), |_| Token::Illegal)(input)
 }
 
-// Token::Color
-// fn from_hex(input: &[u8]) -> Result<u8, std::num::ParseIntError> {
-//   let inp = str::from_utf8(input).unwrap();
-//   u8::from_str_radix(inp, 16)
-// }
-
-// fn is_hex_digit(c: &[u8]) -> bool {
-//   let cc = std::str::from_utf8(c).unwrap().to_owned().chars().next().unwrap();
-//   cc.is_digit(16)
-// }
-
 fn from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
   let hex = u8::from_str_radix(input, 16);
   hex
 }
 
 fn is_hex_digit(c: char) -> bool {
-  // c.is_digit(16)
   c.is_ascii_hexdigit()
 }
 
@@ -215,7 +203,7 @@ pub fn lex_color(input: &[u8]) -> IResult<&[u8], Token> {
 fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
   alt((
     lex_punctuations,
-    lex_char,
+    // lex_char,
     lex_string,
     lex_reserved_ident,
     lex_color,

@@ -38,15 +38,6 @@ pub struct Color {
   pub alpha: u8
 }
 
-// #[test]
-// fn parse_color() {
-//   assert_eq!(hex_color("#2F14DF4E"), Ok(("", Color {
-//     red: 47,
-//     green: 20,
-//     blue: 223,
-//   })));
-// }
-
 #[derive(Clone, Copy, PartialEq, Debug)]
 #[repr(C)]
 pub struct Tokens<'a> {
