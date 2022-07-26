@@ -13,7 +13,7 @@ use super::lexer::{
 };
 use super::osc;
 use super::parser;
-use super::parser::{Expr, Literal, Stmt, Ident};
+use super::parser::{Expr, Ident, Literal, Stmt};
 use super::prompt;
 
 pub enum Task {
@@ -68,12 +68,10 @@ pub fn send(port: u16, address: String) {
 
     if let Some((first, tail)) = stmt.split_first() {
       let osc_path = match first {
-        Stmt::ExprStmt(stmt) => {
-          match stmt {
-            Expr::Lit(Literal::OscPath(path)) => path,
-            Expr::Ident(Ident(val)) => val,
-            _ => "/osc/adress/is/needed" 
-          }
+        Stmt::ExprStmt(stmt) => match stmt {
+          Expr::Lit(Literal::OscPath(path)) => path,
+          Expr::Ident(Ident(val)) => val,
+          _ => "/osc/adress/is/needed",
         },
       };
       if (osc_path) == ":q" {
@@ -87,7 +85,7 @@ pub fn send(port: u16, address: String) {
         .collect::<Vec<OscType>>();
       send_packet(port, address.clone(), osc_path, argument_msg);
     }
-  // }
+    // }
   });
 
   handler.join().unwrap();

@@ -18,7 +18,8 @@ fn main() {
     (version: "0.1.0")
     (author: "Karnpapon Boonput <karnpapon@gmail.com>")
     (about: "a simple interactive OSC debugger")
-  ).get_matches();
+  )
+  .get_matches();
 
   prompt().unwrap();
 }

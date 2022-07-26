@@ -6,9 +6,9 @@ use nom::multi::many0;
 use nom::sequence::*;
 use nom::Err;
 use nom::*;
-use rosc::{OscArray, OscType, OscColor};
+use rosc::{OscArray, OscColor, OscType};
 
-use super::lexer::token::{Token, Tokens, Color};
+use super::lexer::token::{Color, Token, Tokens};
 use std::result::Result::*;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -30,7 +30,7 @@ pub enum Literal {
   Bool(bool),
   String(String),
   OscPath(String),
-  Color(Color)
+  Color(Color),
 }
 
 #[derive(PartialEq, Debug, Eq, Clone)]
@@ -63,9 +63,7 @@ fn parse_stmt(input: Tokens) -> IResult<Tokens, Stmt> {
 }
 
 fn parse_expr_stmt(input: Tokens) -> IResult<Tokens, Stmt> {
-  map(parse_expr, |expr| {
-    Stmt::ExprStmt(expr)
-  })(input)
+  map(parse_expr, |expr| Stmt::ExprStmt(expr))(input)
 }
 
 fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
@@ -91,8 +89,8 @@ fn parse_ident(input: Tokens) -> IResult<Tokens, Ident> {
   } else {
     match t1.tok[0].clone() {
       Token::Ident(name) => Ok((i1, Ident(name))),
-      Token::Nil => Ok(( i1, Ident("Nil".to_string()) )),
-      Token::Inf => Ok(( i1, Ident("Inf".to_string()) )),
+      Token::Nil => Ok((i1, Ident("Nil".to_string()))),
+      Token::Inf => Ok((i1, Ident("Inf".to_string()))),
       _ => Err(Err::Error(Error::new(input, ErrorKind::Tag))),
     }
   }
@@ -172,7 +170,7 @@ fn parse_identity(message: &Ident) -> OscType {
     Ident(val) => match val.as_ref() {
       "Nil" => OscType::Nil,
       "Inf" => OscType::Inf,
-      _ => OscType::String(val.clone())
+      _ => OscType::String(val.clone()),
     },
   }
 }
@@ -184,15 +182,22 @@ fn parse_scalar(message: &Literal) -> OscType {
     Literal::Bool(val) => OscType::Bool(*val),
     Literal::String(val) => OscType::String(val.clone()),
     Literal::OscPath(val) => OscType::String(val.clone()),
-    Literal::Color(Color { red, green, blue, alpha }) => OscType::Color(OscColor { red: red.to_owned(), green: green.to_owned(), blue: blue.to_owned(), alpha: alpha.to_owned() }),
+    Literal::Color(Color {
+      red,
+      green,
+      blue,
+      alpha,
+    }) => OscType::Color(OscColor {
+      red: red.to_owned(),
+      green: green.to_owned(),
+      blue: blue.to_owned(),
+      alpha: alpha.to_owned(),
+    }),
   }
 }
 
 fn parse_compound(message: &[Expr]) -> OscType {
-  let arr = message
-    .iter()
-    .map(parse_message)
-    .collect::<Vec<OscType>>();
+  let arr = message.iter().map(parse_message).collect::<Vec<OscType>>();
   let aa = OscArray::from_iter(arr);
   OscType::Array(aa)
 }
