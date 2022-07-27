@@ -43,7 +43,7 @@ It has two simple features:
 | &#9744; | Blob(Vec&#60;u8>)    |                                    |                                                                             |
 | &#9745; | Time(OscTime)        | `@123456789:20`                    | prefix with `@` separate fractional by `:` eg. `@<seconds>:<fractional>`    |
 | &#9745; | Color(OscColor)      | `#2F14DF2A`                        | prefix with `#` followed by base16 `#<red><green><blue><alpha>`             |
-| &#9745; | Midi(OscMidiMessage) | `~01F14FA4`                        | prefix with `~` followed by base16 `@<port><status><data1><data2>`          |
+| &#9745; | Midi(OscMidiMessage) | `~01F14FA4`                        | prefix with `~` followed by base16 `~<port><status><data1><data2>`          |
 | &#9745; | Array(OscArray)      | `[10,20,true]`                     |                                                                             |
 | &#9745; | Nil                  | `Nil`                              |                                                                             |
 | &#9745; | Inf                  | `Inf`                              |                                                                             |
