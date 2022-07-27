@@ -1,9 +1,4 @@
-use nom::{
-  bytes::complete::{tag, take_while_m_n},
-  combinator::map_res,
-  sequence::tuple,
-  IResult, InputIter, InputLength, InputTake, Needed, Slice,
-};
+use nom::{InputIter, InputLength, InputTake, Needed, Slice};
 use std::iter::Enumerate;
 use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 
@@ -11,9 +6,16 @@ use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 pub enum Token {
   Illegal,
   EOF,
-  OSCPath(String),
 
+  Comma,
+  LMidiBracket,
+  RMidiBracket,
+  LBracket,
+  RBracket,
+  Dot,
   Ident(String),
+
+  OSCPath(String),
   StringLiteral(String),
   IntLiteral(i32),
   Long(i64),
@@ -21,11 +23,10 @@ pub enum Token {
   Double(f64),
   BoolLiteral(bool),
   Char(char),
-
-  Comma,
-  LBracket,
-  RBracket,
+  TimeMsg(TimeMsg),
+  MidiMessage(MidiMsg),
   Color(Color),
+  Blob(Vec<u8>),
   Nil,
   Inf,
 }
@@ -36,6 +37,20 @@ pub struct Color {
   pub green: u8,
   pub blue: u8,
   pub alpha: u8,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct MidiMsg {
+  pub port: u8,
+  pub status: u8,
+  pub data1: u8,
+  pub data2: u8,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct TimeMsg {
+  pub seconds: u32,
+  pub fractional: u32,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]

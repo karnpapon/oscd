@@ -6,9 +6,9 @@ use nom::multi::many0;
 use nom::sequence::*;
 use nom::Err;
 use nom::*;
-use rosc::{OscArray, OscColor, OscType};
+use rosc::{OscArray, OscColor, OscMidiMessage, OscTime, OscType};
 
-use super::lexer::token::{Color, Token, Tokens};
+use super::token::{Color, MidiMsg, TimeMsg, Token, Tokens};
 use std::result::Result::*;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -31,6 +31,8 @@ pub enum Literal {
   String(String),
   OscPath(String),
   Color(Color),
+  MidiMsg(MidiMsg),
+  TimeMsg(TimeMsg),
 }
 
 #[derive(PartialEq, Debug, Eq, Clone)]
@@ -63,7 +65,7 @@ fn parse_stmt(input: Tokens) -> IResult<Tokens, Stmt> {
 }
 
 fn parse_expr_stmt(input: Tokens) -> IResult<Tokens, Stmt> {
-  map(parse_expr, |expr| Stmt::ExprStmt(expr))(input)
+  map(parse_expr, Stmt::ExprStmt)(input)
 }
 
 fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
@@ -78,6 +80,8 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
       Token::BoolLiteral(b) => Ok((i1, Literal::Bool(b))),
       Token::OSCPath(b) => Ok((i1, Literal::OscPath(b))),
       Token::Color(c) => Ok((i1, Literal::Color(c))),
+      Token::MidiMessage(c) => Ok((i1, Literal::MidiMsg(c))),
+      Token::TimeMsg(c) => Ok((i1, Literal::TimeMsg(c))),
       _ => Err(Err::Error(Error::new(input, ErrorKind::Tag))),
     }
   }
@@ -192,6 +196,24 @@ fn parse_scalar(message: &Literal) -> OscType {
       green: green.to_owned(),
       blue: blue.to_owned(),
       alpha: alpha.to_owned(),
+    }),
+    Literal::MidiMsg(MidiMsg {
+      port,
+      status,
+      data1,
+      data2,
+    }) => OscType::Midi(OscMidiMessage {
+      port: port.to_owned(),
+      status: status.to_owned(),
+      data1: data1.to_owned(),
+      data2: data2.to_owned(),
+    }),
+    Literal::TimeMsg(TimeMsg {
+      seconds,
+      fractional,
+    }) => OscType::Time(OscTime {
+      seconds: seconds.to_owned(),
+      fractional: fractional.to_owned(),
     }),
   }
 }

@@ -2,9 +2,8 @@
 
 use clap::*;
 
-mod lexer;
+mod analysis;
 mod osc;
-mod parser;
 mod prompt;
 mod task;
 

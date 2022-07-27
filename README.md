@@ -3,7 +3,7 @@
 [![Build](https://github.com/karnpapon/oscd/actions/workflows/build.yml/badge.svg)](https://github.com/karnpapon/oscd/actions/workflows/build.yml)
 [![Release](https://github.com/karnpapon/oscd/actions/workflows/release.yml/badge.svg)](https://github.com/karnpapon/oscd/actions/workflows/release.yml)
 
-`oscd`, a simple interactive [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) debugger for the terminal inspired by [osc-debugger](https://github.com/alexanderwallin/osc-debugger), with auto type casting and support sending multiple osc arguments. 
+`oscd`, a simple interactive [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) debugger for the terminal by using [nom](https://github.com/Geal/nom) as a lexer/parser, `oscd` offers auto type casting and support sending multiple osc arguments. 
 
 <img src="./ss3.gif">
 
@@ -31,22 +31,22 @@ It has two simple features:
 ## Types [WIP]
 `oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
 
-| status  | types                | example                            | notes                                                         |
-|---------|----------------------|------------------------------------|---------------------------------------------------------------|
-| &#9745; | Int(i32)             | `1234`                             |                                                               |
-| &#9744; | Long(i64)            |                                    |                                                               |
-| &#9745; | Float(f32)           | `1234.32`                          |                                                               |
-| &#9744; | Double(f64)          |                                    |                                                               |
-| &#9745; | String(String)       | `str_no_space`, `"str with space"` |                                                               |
-| &#9745; | Bool(bool)           | `true` or `false`                  |                                                               |
-| &#9744; | Char(char)           |                                    |                                                               |
-| &#9744; | Blob(Vec&#60;u8>)    |                                    |                                                               |
-| &#9744; | Time(OscTime)        |                                    |                                                               |
-| &#9745; | Color(OscColor)      | `#2F14DF2A`                        | use hexadecimal pattern `#<red><green><blue><alpha>`          |
-| &#9744; | Midi(OscMidiMessage) |                                    |                                                               |
-| &#9745; | Array(OscArray)      | `[10,20,true]`                     |                                                               |
-| &#9745; | Nil                  | `Nil`                              |                                                               |
-| &#9745; | Inf                  | `Inf`                              |                                                               |
+| status  | types                | example                            | notes                                                                       |
+|---------|----------------------|------------------------------------|-----------------------------------------------------------------------------|
+| &#9745; | Int(i32)             | `1234`                             |                                                                             |
+| &#9744; | Long(i64)            |                                    |                                                                             |
+| &#9745; | Float(f32)           | `1234.32`                          |                                                                             |
+| &#9744; | Double(f64)          |                                    |                                                                             |
+| &#9745; | String(String)       | `str_no_space`, `"str with space"` |                                                                             |
+| &#9745; | Bool(bool)           | `true` or `false`                  |                                                                             |
+| &#9744; | Char(char)           |                                    |                                                                             |
+| &#9744; | Blob(Vec&#60;u8>)    |                                    |                                                                             |
+| &#9745; | Time(OscTime)        | `@123456789:20`                    | prefix with `@` separate fractional by `:` eg. `@<seconds>:<fractional>`    |
+| &#9745; | Color(OscColor)      | `#2F14DF2A`                        | prefix with `#` followed by base16 `#<red><green><blue><alpha>`             |
+| &#9745; | Midi(OscMidiMessage) | `~01F14FA4`                        | prefix with `~` followed by base16 `@<port><status><data1><data2>`          |
+| &#9745; | Array(OscArray)      | `[10,20,true]`                     |                                                                             |
+| &#9745; | Nil                  | `Nil`                              |                                                                             |
+| &#9745; | Inf                  | `Inf`                              |                                                                             |
 
 ## Development
 - `cargo run` 
@@ -71,3 +71,7 @@ A standard workaround for a single application/binary is to launch using “Open
 - https://ccrma.stanford.edu/groups/osc/index.html
 - https://ccrma.stanford.edu/groups/osc/spec-1_0.html
 - https://ccrma.stanford.edu/groups/osc/files/2009-NIME-OSC-1.1.pdf
+
+
+## Credit
+- inspired by [osc-debugger](https://github.com/alexanderwallin/osc-debugger).

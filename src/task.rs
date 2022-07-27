@@ -7,13 +7,10 @@ use std::io::{stdout, Write};
 use std::thread;
 use termion::screen::*;
 
-use super::lexer::{
-  token::{Token, Tokens},
-  Lexer,
-};
+use super::analysis::lexer::Lexer;
+use super::analysis::parser::{parse_message, Expr, Ident, Literal, Parser, Stmt};
+use super::analysis::token::Tokens;
 use super::osc;
-use super::parser;
-use super::parser::{Expr, Ident, Literal, Stmt};
 use super::prompt;
 
 pub enum Task {
@@ -62,7 +59,7 @@ pub fn send(port: u16, address: String) {
     let osc_msg_vec = Lexer::lex_tokens(osc_msg.as_bytes()).unwrap();
 
     let tokens = Tokens::new(&osc_msg_vec.1);
-    let (_, stmt) = parser::Parser::parse_tokens(tokens).unwrap();
+    let (_, stmt) = Parser::parse_tokens(tokens).unwrap();
 
     // println!("stmtstmtstmt = {:?}", stmt);
 
@@ -80,7 +77,7 @@ pub fn send(port: u16, address: String) {
       let argument_msg = tail
         .iter()
         .map(|x| match x {
-          Stmt::ExprStmt(v) => parser::parse_message(v),
+          Stmt::ExprStmt(v) => parse_message(v),
         })
         .collect::<Vec<OscType>>();
       send_packet(port, address.clone(), osc_path, argument_msg);
@@ -100,6 +97,6 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<Osc
     .expect("Could not connect to socket at address");
 
   let packet = (osc_path, osc_args);
-  println!("packet = {:#?}", packet);
+  // println!("packet = {:#?}", packet);
   sender.send(packet).ok();
 }
