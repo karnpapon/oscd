@@ -1,10 +1,11 @@
 use nom::branch::*;
-use nom::bytes::complete::{is_not, tag, take, take_while_m_n};
+use nom::bytes::complete::{is_not, tag, take, take_till, take_while_m_n};
 use nom::character::complete::{alpha1, alphanumeric1, char as char1, digit0, digit1, multispace0};
-use nom::character::{is_alphabetic, is_alphanumeric};
-use nom::combinator::{map, map_res, opt, recognize};
+use nom::character::{is_alphabetic, is_alphanumeric, is_digit};
+use nom::combinator::{map, map_res, not, opt, recognize};
 use nom::error::*;
 use nom::multi::many0;
+use nom::number::complete::{double, float};
 use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
 use nom::*;
 
@@ -14,45 +15,45 @@ use std::str::Utf8Error;
 
 use super::token::{Color, MidiMsg, TimeMsg, Token};
 
-struct DebugError {
-  message: String,
-}
+// struct DebugError {
+//   message: String,
+// }
 
-impl ParseError<&str> for DebugError {
-  // on one line, we show the error code and the input that caused it
-  fn from_error_kind(input: &str, kind: ErrorKind) -> Self {
-    let message = format!("{:?}:\t{:?}\n", kind, input);
-    println!("{}", message);
-    DebugError { message }
-  }
+// impl ParseError<&str> for DebugError {
+//   // on one line, we show the error code and the input that caused it
+//   fn from_error_kind(input: &str, kind: ErrorKind) -> Self {
+//     let message = format!("{:?}:\t{:?}\n", kind, input);
+//     println!("{}", message);
+//     DebugError { message }
+//   }
 
-  // if combining multiple errors, we show them one after the other
-  fn append(input: &str, kind: ErrorKind, other: Self) -> Self {
-    let message = format!("{}{:?}:\t{:?}\n", other.message, kind, input);
-    println!("{}", message);
-    DebugError { message }
-  }
+//   // if combining multiple errors, we show them one after the other
+//   fn append(input: &str, kind: ErrorKind, other: Self) -> Self {
+//     let message = format!("{}{:?}:\t{:?}\n", other.message, kind, input);
+//     println!("{}", message);
+//     DebugError { message }
+//   }
 
-  fn from_char(input: &str, c: char) -> Self {
-    let message = format!("'{}':\t{:?}\n", c, input);
-    println!("{}", message);
-    DebugError { message }
-  }
+//   fn from_char(input: &str, c: char) -> Self {
+//     let message = format!("'{}':\t{:?}\n", c, input);
+//     println!("{}", message);
+//     DebugError { message }
+//   }
 
-  fn or(self, other: Self) -> Self {
-    let message = format!("{}\tOR\n{}\n", self.message, other.message);
-    println!("{}", message);
-    DebugError { message }
-  }
-}
+//   fn or(self, other: Self) -> Self {
+//     let message = format!("{}\tOR\n{}\n", self.message, other.message);
+//     println!("{}", message);
+//     DebugError { message }
+//   }
+// }
 
-impl ContextError<&str> for DebugError {
-  fn add_context(input: &str, ctx: &'static str, other: Self) -> Self {
-    let message = format!("{}\"{}\":\t{:?}\n", other.message, ctx, input);
-    println!("{}", message);
-    DebugError { message }
-  }
-}
+// impl ContextError<&str> for DebugError {
+//   fn add_context(input: &str, ctx: &'static str, other: Self) -> Self {
+//     let message = format!("{}\"{}\":\t{:?}\n", other.message, ctx, input);
+//     println!("{}", message);
+//     DebugError { message }
+//   }
+// }
 
 macro_rules! syntax {
   ($func_name: ident, $tag_string: literal, $output_token: expr) => {
@@ -66,16 +67,12 @@ macro_rules! syntax {
 syntax! {comma_punctuation, ",", Token::Comma}
 syntax! {lbracket_punctuation, "[", Token::LBracket}
 syntax! {rbracket_punctuation, "]", Token::RBracket}
-// syntax! {lmidibracket_punctuation, "{", Token::LMidiBracket}
-// syntax! {rmidibracket_punctuation, "}", Token::RMidiBracket}
 
 pub fn lex_punctuations(input: &[u8]) -> IResult<&[u8], Token> {
   alt((
     comma_punctuation,
     lbracket_punctuation,
     rbracket_punctuation,
-    // lmidibracket_punctuation,
-    // rmidibracket_punctuation,
   ))(input)
 }
 
@@ -86,10 +83,6 @@ fn pis(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
   let (i1, c1) = take(1usize)(input)?;
   match c1.as_bytes() {
     b"\"" => Ok((input, vec![])),
-    // b"\\" => {
-    //   let (i2, c2) = take(1usize)(i1)?;
-    //   pis(i2).map(|(slice, done)| (slice, concat_slice_vec(c2, done)))
-    // }
     c => pis(i1).map(|(slice, done)| (slice, concat_slice_vec(c, done))),
   }
 }
@@ -163,10 +156,6 @@ fn lex_reserved_ident(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-// fn complete_str_from_str<F: FromStr>(c: &str) -> Result<F, F::Err> {
-//   FromStr::from_str(c)
-// }
-
 // Integers parsing
 fn lex_integer(input: &[u8]) -> IResult<&[u8], Token> {
   map(
@@ -186,12 +175,21 @@ fn unsigned_int(input: &[u8]) -> IResult<&[u8], i32> {
   map_res(float_str, FromStr::from_str)(input)
 }
 
-fn unsigned_float(input: &[u8]) -> IResult<&[u8], f32> {
-  let float_bytes = recognize(alt((
-    delimited(digit1, tag("."), opt(digit1)),
-    delimited(opt(digit1), tag("."), digit1),
-  )));
-  let float_str = map_res(float_bytes, str::from_utf8);
+fn lex_long_integer(input: &[u8]) -> IResult<&[u8], Token> {
+  map(
+    pair(opt(alt((tag("+"), tag("-")))), unsigned_long_int),
+    |(sign, value)| {
+      let s = sign
+        .and_then(|s| if s[0] == b'-' { Some(-1i64) } else { None })
+        .unwrap_or(1i64)
+        * value;
+      Token::Long(s)
+    },
+  )(input)
+}
+
+fn unsigned_long_int(input: &[u8]) -> IResult<&[u8], i64> {
+  let float_str = map_res(terminated(digit1, tag("_i64")), str::from_utf8);
   map_res(float_str, FromStr::from_str)(input)
 }
 
@@ -206,6 +204,32 @@ fn lex_float(input: &[u8]) -> IResult<&[u8], Token> {
       Token::FloatLiteral(s)
     },
   )(input)
+}
+
+fn unsigned_float(input: &[u8]) -> IResult<&[u8], f32> {
+  let float_bytes = recognize(alt((
+    delimited(digit1, tag("."), opt(digit1)),
+    delimited(opt(digit1), tag("."), digit1),
+  )));
+  let float_str = map_res(float_bytes, str::from_utf8);
+  map_res(float_str, FromStr::from_str)(input)
+}
+
+fn lex_double_float(input: &[u8]) -> IResult<&[u8], Token> {
+  map(
+    pair(opt(alt((tag("+"), tag("-")))), unsigned_double_float),
+    |(sign, value)| {
+      let s = sign
+        .and_then(|s| if s[0] == b'-' { Some(-1f64) } else { None })
+        .unwrap_or(1f64)
+        * value;
+      Token::Double(s)
+    },
+  )(input)
+}
+
+fn unsigned_double_float(input: &[u8]) -> IResult<&[u8], f64> {
+  terminated(double, tag("_f64"))(input)
 }
 
 fn lex_illegal(input: &[u8]) -> IResult<&[u8], Token> {
@@ -285,11 +309,13 @@ fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
     lex_punctuations,
     // lex_char,
     lex_string,
+    lex_double_float,
     lex_reserved_ident,
     lex_timemsg,
     lex_midimsg,
     lex_color,
     lex_float,
+    lex_long_integer,
     lex_integer,
     lex_illegal,
   ))(input)

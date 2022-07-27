@@ -26,7 +26,9 @@ pub enum Expr {
 #[derive(PartialEq, Debug, Clone)]
 pub enum Literal {
   Int(i32),
+  Long(i64),
   Float(f32),
+  Double(f64),
   Bool(bool),
   String(String),
   OscPath(String),
@@ -74,9 +76,11 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
     Err(Err::Error(Error::new(input, ErrorKind::Tag)))
   } else {
     match t1.tok[0].clone() {
+      Token::Long(val) => Ok((i1, Literal::Long(val))),
       Token::IntLiteral(name) => Ok((i1, Literal::Int(name))),
       Token::StringLiteral(s) => Ok((i1, Literal::String(s))),
       Token::FloatLiteral(s) => Ok((i1, Literal::Float(s))),
+      Token::Double(s) => Ok((i1, Literal::Double(s))),
       Token::BoolLiteral(b) => Ok((i1, Literal::Bool(b))),
       Token::OSCPath(b) => Ok((i1, Literal::OscPath(b))),
       Token::Color(c) => Ok((i1, Literal::Color(c))),
@@ -181,8 +185,10 @@ fn parse_identity(message: &Ident) -> OscType {
 
 fn parse_scalar(message: &Literal) -> OscType {
   match message {
+    Literal::Long(val) => OscType::Long(*val),
     Literal::Int(val) => OscType::Int(*val),
     Literal::Float(val) => OscType::Float(*val),
+    Literal::Double(val) => OscType::Double(*val),
     Literal::Bool(val) => OscType::Bool(*val),
     Literal::String(val) => OscType::String(val.clone()),
     Literal::OscPath(val) => OscType::String(val.clone()),

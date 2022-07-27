@@ -8,11 +8,8 @@ pub enum Token {
   EOF,
 
   Comma,
-  LMidiBracket,
-  RMidiBracket,
   LBracket,
   RBracket,
-  Dot,
   Ident(String),
 
   OSCPath(String),
