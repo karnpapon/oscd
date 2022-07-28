@@ -1,17 +1,19 @@
 use nom::branch::*;
-use nom::bytes::complete::{is_not, tag, take, take_till, take_while_m_n};
-use nom::character::complete::{alpha1, alphanumeric1, char as char1, digit0, anychar, digit1, multispace0};
+use nom::bytes::complete::{tag, take, take_while_m_n};
+use nom::character::complete::{
+  alpha1, alphanumeric1, anychar, char as char1, digit0, digit1, multispace0,
+};
 use nom::character::{is_alphabetic, is_alphanumeric, is_digit};
-use nom::combinator::{map, map_res, cond, opt, recognize};
-use nom::error::*;
+use nom::combinator::{cond, iterator, map, map_res, opt, recognize};
 use nom::multi::many0;
-use nom::number::complete::{double};
+use nom::number::complete::double;
 use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
 use nom::*;
+use std::iter::Iterator;
 
-use std::str;
 use std::str::FromStr;
 use std::str::Utf8Error;
+use std::{str, vec};
 
 use super::token::{Color, MidiMsg, TimeMsg, Token};
 
@@ -71,20 +73,39 @@ fn lex_string(input: &[u8]) -> IResult<&[u8], Token> {
 }
 
 fn lex_char(input: &[u8]) -> IResult<&[u8], Token> {
-  map(delimited(
-    tag("\'"),
-    map(cond(true, anychar), |x| x), 
-    tag("\'")), |x| Token::Char(x.unwrap()))
-  (input)
-  // map(cond(true, anychar), |x| Token::Char(x.unwrap()))(input)
+  map(
+    delimited(
+      tag("\'"),
+      map(cond(true, anychar), |x| x.unwrap()),
+      tag("\'"),
+    ),
+    Token::Char,
+  )(input)
+}
+
+fn lex_blob(input: &[u8]) -> IResult<&[u8], Token> {
+  map(delimited(tag("%["), blobb, tag("]")), Token::Blob)(input)
+}
+
+fn blobb(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+  let mut it = iterator(input, terminated(digit1, tag(",")));
+
+  let parsed = it.map(|v| str::from_utf8(v).unwrap());
+  let byte1 = parsed
+    .into_iter()
+    .map(|p| p.parse::<u8>().unwrap())
+    .collect::<Vec<_>>();
+  let _res: IResult<_, _> = it.finish();
+
+  Ok((_res.unwrap().0, byte1))
 }
 
 // Reserved or ident (eg. Nil, Inf, OSCpath)
 fn lex_reserved_ident(input: &[u8]) -> IResult<&[u8], Token> {
   map_res(
     recognize(pair(
-      alt((alpha1, tag("_"), tag("/"), tag(":"))),
-      many0(alt((alphanumeric1, tag("_"), tag("/"), tag(":")))),
+      alt((alpha1, tag("_"), tag("-"), tag("/"), tag(":"))),
+      many0(alt((alphanumeric1, tag("_"), tag("-"), tag("/"), tag(":")))),
     )),
     |s| {
       let c = complete_byte_slice_str_from_utf8(s);
@@ -212,7 +233,6 @@ pub fn lex_color(input: &[u8]) -> IResult<&[u8], Token> {
 
 // -------------------
 // /s_new ~2F14FA4C
-
 pub fn lex_midimsg(input: &[u8]) -> IResult<&[u8], Token> {
   let (_input, _) = tag("~")(input)?;
   let (__input, (port, status, data1, data2)) =
@@ -253,6 +273,7 @@ pub fn lex_timemsg(input: &[u8]) -> IResult<&[u8], Token> {
 fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
   alt((
     lex_punctuations,
+    lex_blob,
     lex_string,
     lex_reserved_ident,
     lex_double_float,

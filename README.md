@@ -28,7 +28,7 @@ It has two simple features:
   - it will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`).
 - see supported types below.
 
-## Types [WIP]
+## Types
 `oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
 
 | status  | types                | example                            | notes                                                                       |
@@ -40,7 +40,7 @@ It has two simple features:
 | &#9745; | String(String)       | `str_no_space`, `"str with space"` |                                                                             |
 | &#9745; | Bool(bool)           | `true` or `false`                  |                                                                             |
 | &#9745; | Char(char)           |  `'S'`                             | wrapped in single quote is needed, otherwise it'll cast it to `String`      |
-| &#9744; | Blob(Vec&#60;u8>)    |                                    |                                                                             |
+| &#9745; | Blob(Vec&#60;u8>)    | `%[10,20,30,]`                     | prefix with `%` and suffix with `,` after last item is needed.              |
 | &#9745; | Time(OscTime)        | `@123456789:20`                    | prefix with `@` separate fractional by `:` eg. `@<seconds>:<fractional>`    |
 | &#9745; | Color(OscColor)      | `#2F14DF2A`                        | prefix with `#` followed by base16 `#<red><green><blue><alpha>`             |
 | &#9745; | Midi(OscMidiMessage) | `~01F14FA4`                        | prefix with `~` followed by base16 `~<port><status><data1><data2>`          |

@@ -32,6 +32,7 @@ pub enum Literal {
   Bool(bool),
   String(String),
   Char(char),
+  Blob(Vec<u8>),
   OscPath(String),
   Color(Color),
   MidiMsg(MidiMsg),
@@ -83,6 +84,7 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
       Token::FloatLiteral(s) => Ok((i1, Literal::Float(s))),
       Token::Double(s) => Ok((i1, Literal::Double(s))),
       Token::BoolLiteral(b) => Ok((i1, Literal::Bool(b))),
+      Token::Blob(b) => Ok((i1, Literal::Blob(b))),
       Token::OSCPath(b) => Ok((i1, Literal::OscPath(b))),
       Token::Color(c) => Ok((i1, Literal::Color(c))),
       Token::Char(c) => Ok((i1, Literal::Char(c))),
@@ -192,6 +194,7 @@ fn parse_scalar(message: &Literal) -> OscType {
     Literal::Float(val) => OscType::Float(*val),
     Literal::Double(val) => OscType::Double(*val),
     Literal::Bool(val) => OscType::Bool(*val),
+    Literal::Blob(val) => OscType::Blob(val.clone()),
     Literal::Char(val) => OscType::Char(*val),
     Literal::String(val) => OscType::String(val.clone()),
     Literal::OscPath(val) => OscType::String(val.clone()),
@@ -234,4 +237,4 @@ fn parse_compound(message: &[Expr]) -> OscType {
 }
 
 // test
-// /s_new "default after whitespace" 1002 'A' freq 12_i64 12.4533 -12 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true]
+// /s_new "default after whitespace" 1002 'A' freq 12_i64 12.4533 -12 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true] %[0,255,12,]
