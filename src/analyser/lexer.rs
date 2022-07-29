@@ -84,10 +84,10 @@ fn lex_char(input: &[u8]) -> IResult<&[u8], Token> {
 }
 
 fn lex_blob(input: &[u8]) -> IResult<&[u8], Token> {
-  map(delimited(tag("%["), blobb, tag("]")), Token::Blob)(input)
+  map(delimited(tag("%["), blobs, tag("]")), Token::Blob)(input)
 }
 
-fn blobb(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+fn blobs(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
   let mut it = iterator(input, terminated(digit1, tag(",")));
 
   let parsed = it.map(|v| str::from_utf8(v).unwrap());
@@ -233,7 +233,7 @@ pub fn lex_color(input: &[u8]) -> IResult<&[u8], Token> {
 // /s_new ~2F14FA4C
 pub fn lex_midimsg(input: &[u8]) -> IResult<&[u8], Token> {
   let (_input, _) = tag("~")(input)?;
-  let (__input, (port, status, data1, data2)) =
+  let (remaining, (port, status, data1, data2)) =
     tuple((hex_primary, hex_primary, hex_primary, hex_primary))(
       std::str::from_utf8(_input).unwrap(),
     )
@@ -244,7 +244,7 @@ pub fn lex_midimsg(input: &[u8]) -> IResult<&[u8], Token> {
     data1,
     data2,
   };
-  Ok((__input.as_bytes(), Token::MidiMessage(msg)))
+  Ok((remaining.as_bytes(), Token::MidiMessage(msg)))
 }
 
 // -------------------

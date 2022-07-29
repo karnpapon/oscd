@@ -235,6 +235,3 @@ fn parse_compound(message: &[Expr]) -> OscType {
   let aa = OscArray::from_iter(arr);
   OscType::Array(aa)
 }
-
-// test
-// /s_new "default after whitespace" 1002 'A' freq 12_i64 12.4533 -12 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true] %[0,255,12,]

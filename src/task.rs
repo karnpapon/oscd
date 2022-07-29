@@ -41,11 +41,11 @@ pub fn send(port: u16, address: String) {
     &format!( "{} {} {} {} {} {} {} {} {}",
       format!("Sending OSC messages to {:?}: {:?} \n",address, port).bold().white().dimmed(),
       "Use the following format to send messages: <address> <value>\n".white().dimmed(),
-      "- <address> is osc path to communicate with\n".green().dimmed(),
-      "- <value> is a number or a string without wrapping in double quotes (can have multiple values) \n".green().dimmed(),
-      " . Example:".white().dimmed(), "/s_new default -1 0 0 freq 850\n".cyan().dimmed(),
-      " . will be parsed as".white().dimmed(), "(\"s_new\",[String(\"default\"), Int(-1), Int(0), Int(0), String(\"freq\"), Int(850)])\n".cyan().dimmed(),
-      "- to exit = Ctrl-C".green().dimmed(),
+      "- <address> is osc path to communicate with\n".white().dimmed(),
+      "- <value> is a number or a string without wrapping in double quotes (can have multiple values) \n".white().dimmed(),
+      " . Example:".white().dimmed(), "/s_new default -1 0 0 freq 850\n".white().dimmed(),
+      " . will be parsed as".white().dimmed(), "(\"s_new\",[String(\"default\"), Int(-1), Int(0), Int(0), String(\"freq\"), Int(850)])\n".white().dimmed(),
+      "- to exit = Ctrl-C".white().dimmed(),
     ).dimmed()
   );
   screen.flush().unwrap();
@@ -60,8 +60,7 @@ pub fn send(port: u16, address: String) {
     let osc_msg_vec = Lexer::lex_tokens(osc_msg.as_bytes()).finish().unwrap();
 
     let tokens = Tokens::new(&osc_msg_vec.1);
-    let (_, stmt) =
-      Parser::parse_tokens(tokens).unwrap_or({ (Tokens::new(&Vec::new()), Vec::new()) });
+    let (_, stmt) = Parser::parse_tokens(tokens).unwrap_or((Tokens::new(&Vec::new()), Vec::new()));
 
     match stmt.split_first() {
       Some((first, tail)) => {
@@ -83,7 +82,16 @@ pub fn send(port: u16, address: String) {
           .collect::<Vec<OscType>>();
         send_packet(port, address.clone(), osc_path, argument_msg);
       }
-      None => println!("[ERROR] parsing msg: please check if argument is valid."),
+      None => println!(
+        "{}{}",
+        "[ERROR]: ".to_string().red().dimmed(),
+        format!(
+          "parsing msg `{:?}` : please check if argument is valid.",
+          tokens
+        )
+        .white()
+        .dimmed()
+      ),
     }
 
     // }
@@ -101,6 +109,10 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<Osc
     .expect("Could not connect to socket at address");
 
   let packet = (osc_path, osc_args);
-  println!("[SUCCESS] packets = {:?}", packet);
+  println!(
+    "{}{}",
+    "[SUCCESS]: ".green().dimmed(),
+    format!("packets = {:?}", packet).white().dimmed()
+  );
   sender.send(packet).ok();
 }
