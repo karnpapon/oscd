@@ -1,5 +1,6 @@
 use colored::*;
 use inquire::Text;
+use nom::Finish;
 // use nannou_osc as osc;
 use rosc::OscType;
 use std::fmt;
@@ -7,9 +8,9 @@ use std::io::{stdout, Write};
 use std::thread;
 use termion::screen::*;
 
-use super::analysis::lexer::Lexer;
-use super::analysis::parser::{parse_message, Expr, Ident, Literal, Parser, Stmt};
-use super::analysis::token::Tokens;
+use super::analyser::lexer::Lexer;
+use super::analyser::parser::{parse_message, Expr, Ident, Literal, Parser, Stmt};
+use super::analyser::token::Tokens;
 use super::osc;
 use super::prompt;
 
@@ -44,7 +45,7 @@ pub fn send(port: u16, address: String) {
       "- <value> is a number or a string without wrapping in double quotes (can have multiple values) \n".green().dimmed(),
       " . Example:".white().dimmed(), "/s_new default -1 0 0 freq 850\n".cyan().dimmed(),
       " . will be parsed as".white().dimmed(), "(\"s_new\",[String(\"default\"), Int(-1), Int(0), Int(0), String(\"freq\"), Int(850)])\n".cyan().dimmed(),
-      "- to exit = :q".green().dimmed(),
+      "- to exit = Ctrl-C".green().dimmed(),
     ).dimmed()
   );
   screen.flush().unwrap();
@@ -56,32 +57,35 @@ pub fn send(port: u16, address: String) {
       .with_render_config(prompt::get_render_config())
       .prompt()
       .unwrap();
-    let osc_msg_vec = Lexer::lex_tokens(osc_msg.as_bytes()).unwrap();
+    let osc_msg_vec = Lexer::lex_tokens(osc_msg.as_bytes()).finish().unwrap();
 
     let tokens = Tokens::new(&osc_msg_vec.1);
-    let (_, stmt) = Parser::parse_tokens(tokens).unwrap();
+    let (_, stmt) =
+      Parser::parse_tokens(tokens).unwrap_or({ (Tokens::new(&Vec::new()), Vec::new()) });
 
-    // println!("stmtstmtstmt = {:?}", stmt);
-
-    if let Some((first, tail)) = stmt.split_first() {
-      let osc_path = match first {
-        Stmt::ExprStmt(stmt) => match stmt {
-          Expr::Lit(Literal::OscPath(path)) => path,
-          Expr::Ident(Ident(val)) => val,
-          _ => "/osc/adress/is/needed",
-        },
-      };
-      if (osc_path) == ":q" {
-        break;
+    match stmt.split_first() {
+      Some((first, tail)) => {
+        let osc_path = match first {
+          Stmt::ExprStmt(stmt) => match stmt {
+            Expr::Lit(Literal::OscPath(path)) => path,
+            // Expr::Ident(Ident(val)) => val,
+            _ => "/osc/adress/is/needed",
+          },
+        };
+        if (osc_path) == ":q" {
+          break;
+        }
+        let argument_msg = tail
+          .iter()
+          .map(|x| match x {
+            Stmt::ExprStmt(v) => parse_message(v),
+          })
+          .collect::<Vec<OscType>>();
+        send_packet(port, address.clone(), osc_path, argument_msg);
       }
-      let argument_msg = tail
-        .iter()
-        .map(|x| match x {
-          Stmt::ExprStmt(v) => parse_message(v),
-        })
-        .collect::<Vec<OscType>>();
-      send_packet(port, address.clone(), osc_path, argument_msg);
+      None => println!("[ERROR] parsing msg: please check if argument is valid."),
     }
+
     // }
   });
 
@@ -97,6 +101,6 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<Osc
     .expect("Could not connect to socket at address");
 
   let packet = (osc_path, osc_args);
-  println!("packets = {:?}", packet);
+  println!("[SUCCESS] packets = {:?}", packet);
   sender.send(packet).ok();
 }

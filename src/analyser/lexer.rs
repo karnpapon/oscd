@@ -1,19 +1,19 @@
-use nom::branch::*;
-use nom::bytes::complete::{tag, take, take_while_m_n};
-use nom::character::complete::{
-  alpha1, alphanumeric1, anychar, char as char1, digit0, digit1, multispace0,
-};
-use nom::character::{is_alphabetic, is_alphanumeric, is_digit};
-use nom::combinator::{cond, iterator, map, map_res, opt, recognize};
-use nom::multi::many0;
-use nom::number::complete::double;
-use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
-use nom::*;
-use std::iter::Iterator;
-
 use std::str::FromStr;
 use std::str::Utf8Error;
 use std::{str, vec};
+
+use nom::branch::*;
+use nom::bytes::complete::{tag, take, take_while_m_n};
+use nom::character::complete::{
+  alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0,
+};
+use nom::combinator::{cond, iterator, map, map_res, opt, recognize};
+use nom::error::{Error, ErrorKind};
+use nom::multi::many0;
+use nom::number::complete::double;
+use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
+use nom::Err;
+use nom::*;
 
 use super::token::{Color, MidiMsg, TimeMsg, Token};
 
@@ -95,9 +95,9 @@ fn blobb(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
     .into_iter()
     .map(|p| p.parse::<u8>().unwrap())
     .collect::<Vec<_>>();
-  let _res: IResult<_, _> = it.finish();
+  let res: IResult<_, _> = it.finish();
 
-  Ok((_res.unwrap().0, byte1))
+  Ok((res.unwrap().0, byte1))
 }
 
 // Reserved or ident (eg. Nil, Inf, OSCpath)
@@ -216,19 +216,17 @@ fn hex_primary(input: &str) -> IResult<&str, u8> {
 }
 
 pub fn lex_color(input: &[u8]) -> IResult<&[u8], Token> {
-  let (_input, _) = tag("#")(input)?;
-  let (__input, (red, green, blue, alpha)) =
-    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(
-      std::str::from_utf8(_input).unwrap(),
-    )
-    .expect("cannot parse color arg");
+  let (inp, _) = tag("#")(input)?;
+  let (remain, (red, green, blue, alpha)) =
+    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(std::str::from_utf8(inp).unwrap())
+      .unwrap();
   let col = Color {
     red,
     green,
     blue,
     alpha,
   };
-  Ok((__input.as_bytes(), Token::Color(col)))
+  Ok((remain.as_bytes(), Token::Color(col)))
 }
 
 // -------------------
@@ -239,7 +237,7 @@ pub fn lex_midimsg(input: &[u8]) -> IResult<&[u8], Token> {
     tuple((hex_primary, hex_primary, hex_primary, hex_primary))(
       std::str::from_utf8(_input).unwrap(),
     )
-    .expect("cannot parse midimsg arg");
+    .unwrap();
   let msg = MidiMsg {
     port,
     status,
@@ -251,7 +249,6 @@ pub fn lex_midimsg(input: &[u8]) -> IResult<&[u8], Token> {
 
 // -------------------
 // /s_new @123456789:20
-// TODO: handle unsupport case eg. @123456789:20:123
 pub fn lex_timemsg(input: &[u8]) -> IResult<&[u8], Token> {
   let (_input, _) = tag("@")(input)?;
   let (remaining, (seconds, fractional)) = separated_pair(digit1, char1(':'), digit1)(_input)?;

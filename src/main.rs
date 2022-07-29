@@ -2,7 +2,7 @@
 
 use clap::*;
 
-mod analysis;
+mod analyser;
 mod osc;
 mod prompt;
 mod task;
