@@ -43,7 +43,7 @@ pub fn send(port: u16, address: String) {
       "Use the following format to send messages: <address> <value>\n".white().dimmed(),
       "- <address> is osc path to communicate with\n".white().dimmed(),
       "- <value> is a number or a string without wrapping in double quotes (can have multiple values) \n".white().dimmed(),
-      " . Example:".white().dimmed(), "/s_new default -1 0 0 freq 850\n".white().dimmed(),
+      " . Example:".white().dimmed(), "/s_new \"default\" -1 0 0 \"freq\" 850\n".white().dimmed(),
       " . will be parsed as".white().dimmed(), "(\"s_new\",[String(\"default\"), Int(-1), Int(0), Int(0), String(\"freq\"), Int(850)])\n".white().dimmed(),
       "- to exit = Ctrl-C".white().dimmed(),
     ).dimmed()
@@ -71,9 +71,9 @@ pub fn send(port: u16, address: String) {
             _ => "/osc/adress/is/needed",
           },
         };
-        if (osc_path) == ":q" {
-          break;
-        }
+        // if (osc_path) == ":q" {
+        //   break;
+        // }
         let argument_msg = tail
           .iter()
           .map(|x| match x {

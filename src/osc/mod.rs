@@ -2,6 +2,7 @@
 //! [**receiver(port)**](./fn.receiver.html) creates an OSC receiver.
 
 pub use rosc;
+use rosc::OscPacket;
 
 // Re-export rosc items.
 //
@@ -68,14 +69,22 @@ where
   }
 }
 
-impl Into<rosc::OscPacket> for Packet {
-  fn into(self) -> rosc::OscPacket {
-    match self {
-      Packet::Message(msg) => rosc::OscPacket::Message(msg),
-      Packet::Bundle(bundle) => rosc::OscPacket::Bundle(bundle),
+impl From<Packet> for OscPacket {
+  fn from(msg: Packet) -> Self {
+    match msg {
+      Packet::Message(msg) => Self::Message(msg),
+      Packet::Bundle(bundle) => Self::Bundle(bundle),
     }
   }
 }
+// impl Into<rosc::OscPacket> for Packet {
+//   fn into(self) -> rosc::OscPacket {
+//     match self {
+//       Packet::Message(msg) => rosc::OscPacket::Message(msg),
+//       Packet::Bundle(bundle) => rosc::OscPacket::Bundle(bundle),
+//     }
+//   }
+// }
 
 impl Packet {
   /// A recursive function that unfolds the packet into the end of the given buffer of messages.

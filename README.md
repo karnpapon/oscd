@@ -22,25 +22,25 @@ It has two simple features:
 - Use the following format to send messages: `<address> <argument>`
 - `<address>` is osc path to communicate with.
 - `<argument>` is a number or a string (double quotes can be omitted) and can have multiple arguments.
-- eg. `/s_new "default" -1 0 0 freq 850`, will be parsed as `("s_new", [String("default"), Int(-1), Int(0), Int(0), String("freq"), Int(850)])`)
+- eg. `/s_new "default" -1 0 0 "freq" 850`, will be parsed as `("s_new", [String("default"), Int(-1), Int(0), Int(0), String("freq"), Int(850)])`)
 - by default `oscd` automatically casting type for you, and it also support [numeric literals type conversion](https://doc.rust-lang.org/rust-by-example/types/cast.html)
   - eg. `65.4321_f64` is equivalent to `65.4321 as f64` (`Explicit conversion`)
   - it will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`).
 - see supported types below.
-- complete osc example `/s_new "default after whitespace" 1002 'A' freq 12_i64 12.4533 -12 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true] %[0,255,12,]`
+- complete osc example `/s_new "default after whitespace" 1002 'A' 12_i64 12.4533 -12 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true] %[0,255,12,]`
 
 ## Types
 `oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
 
 | status  | types                | example                            | notes                                                                       |
 |---------|----------------------|------------------------------------|-----------------------------------------------------------------------------|
-| &#9745; | Int(i32)             | `1234`                             |                                                                             |
+| &#9745; | Int(i32)             | `1234` or `1234_i32`               |                                                                             |
 | &#9745; | Long(i64)            | `1234_i64`                         |                                                                             |
-| &#9745; | Float(f32)           | `1234.32`                          |                                                                             |
+| &#9745; | Float(f32)           | `1234.32` or `1234.32_f32`         |                                                                             |
 | &#9745; | Double(f64)          | `1234.25434_f64`                   |                                                                             |
-| &#9745; | String(String)       | `str_no_space`, `"str with space"` |                                                                             |
+| &#9745; | String(String)       | `"str goes here"`                  | wrapped in doulble quotes is needed                                         |
 | &#9745; | Bool(bool)           | `true` or `false`                  |                                                                             |
-| &#9745; | Char(char)           |  `'S'`                             | wrapped in single quote is needed, otherwise it'll cast it to `String`      |
+| &#9745; | Char(char)           |  `'S'`                             | wrapped in single quote is needed                                           |
 | &#9745; | Blob(Vec&#60;u8>)    | `%[10,20,30,]`                     | prefix with `%` and suffix with `,` after last item is needed.              |
 | &#9745; | Time(OscTime)        | `@123456789:20`                    | prefix with `@` separate fractional by `:` eg. `@<seconds>:<fractional>`    |
 | &#9745; | Color(OscColor)      | `#2F14DF2A`                        | prefix with `#` followed by base16 `#<red><green><blue><alpha>`             |
@@ -59,6 +59,9 @@ It has two simple features:
   - x86_64-macos
   - x86_64-windows
 
+
+## Caveats
+- osc-path wildcard currently not support.
 
 ## ⚠️ Bypass security settings. (OSX)
 

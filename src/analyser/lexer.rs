@@ -5,12 +5,12 @@ use std::{str, vec};
 use nom::branch::*;
 use nom::bytes::complete::{tag, take, take_while_m_n};
 use nom::character::complete::{
-  alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0,
+  alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0, one_of,
 };
 use nom::combinator::{cond, iterator, map, map_res, opt, recognize};
 use nom::error::{Error, ErrorKind};
 use nom::multi::many0;
-use nom::number::complete::double;
+use nom::number::complete::{double, float};
 use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
 use nom::Err;
 use nom::*;
@@ -104,8 +104,8 @@ fn blobs(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 fn lex_reserved_ident(input: &[u8]) -> IResult<&[u8], Token> {
   map_res(
     recognize(pair(
-      alt((alpha1, tag("_"), tag("-"), tag("/"), tag(":"))),
-      many0(alt((alphanumeric1, tag("_"), tag("-"), tag("/"), tag(":")))),
+      alt((alpha1, tag("_"), tag("-"), tag("/"))),
+      many0(alt((alphanumeric1, tag("_"), tag("-"), tag("/")))),
     )),
     |s| {
       let c = complete_byte_slice_str_from_utf8(s);
@@ -116,7 +116,7 @@ fn lex_reserved_ident(input: &[u8]) -> IResult<&[u8], Token> {
         "Inf" => Token::Inf,
         _ => match syntax.chars().next().unwrap() {
           '/' => Token::OSCPath(syntax.to_string()),
-          _ => Token::Ident(syntax.to_string()),
+          _ => Token::Nil,
         },
       })
     },
@@ -138,8 +138,8 @@ fn lex_integer(input: &[u8]) -> IResult<&[u8], Token> {
 }
 
 fn unsigned_int(input: &[u8]) -> IResult<&[u8], i32> {
-  let float_str = map_res(digit1, str::from_utf8);
-  map_res(float_str, FromStr::from_str)(input)
+  let int_str = map_res(terminated(digit1, opt(tag("_i32"))), str::from_utf8);
+  map_res(int_str, FromStr::from_str)(input)
 }
 
 fn lex_long_integer(input: &[u8]) -> IResult<&[u8], Token> {
@@ -156,8 +156,8 @@ fn lex_long_integer(input: &[u8]) -> IResult<&[u8], Token> {
 }
 
 fn unsigned_long_int(input: &[u8]) -> IResult<&[u8], i64> {
-  let float_str = map_res(terminated(digit1, tag("_i64")), str::from_utf8);
-  map_res(float_str, FromStr::from_str)(input)
+  let int_str = map_res(terminated(digit1, tag("_i64")), str::from_utf8);
+  map_res(int_str, FromStr::from_str)(input)
 }
 
 fn lex_float(input: &[u8]) -> IResult<&[u8], Token> {
@@ -178,7 +178,7 @@ fn unsigned_float(input: &[u8]) -> IResult<&[u8], f32> {
     delimited(digit1, tag("."), opt(digit1)),
     delimited(opt(digit1), tag("."), digit1),
   )));
-  let float_str = map_res(float_bytes, str::from_utf8);
+  let float_str = map_res(terminated(float_bytes, opt(tag("_f32"))), str::from_utf8);
   map_res(float_str, FromStr::from_str)(input)
 }
 
@@ -272,14 +272,14 @@ fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
     lex_punctuations,
     lex_blob,
     lex_string,
-    lex_reserved_ident,
-    lex_double_float,
     lex_timemsg,
     lex_midimsg,
     lex_color,
-    lex_float,
     lex_long_integer,
+    lex_double_float,
+    lex_float,
     lex_integer,
+    lex_reserved_ident,
     lex_char,
     lex_illegal,
   ))(input)
