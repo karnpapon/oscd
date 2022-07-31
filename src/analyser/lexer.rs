@@ -5,14 +5,12 @@ use std::{str, vec};
 use nom::branch::*;
 use nom::bytes::complete::{tag, take, take_while_m_n};
 use nom::character::complete::{
-  alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0, one_of,
+  alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0,
 };
 use nom::combinator::{cond, iterator, map, map_res, opt, recognize};
-use nom::error::{Error, ErrorKind};
 use nom::multi::many0;
-use nom::number::complete::{double, float};
+use nom::number::complete::double;
 use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
-use nom::Err;
 use nom::*;
 
 use super::token::{Color, MidiMsg, TimeMsg, Token};
@@ -100,24 +98,41 @@ fn blobs(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
   Ok((res.unwrap().0, byte1))
 }
 
-// Reserved or ident (eg. Nil, Inf, OSCpath)
 fn lex_reserved_ident(input: &[u8]) -> IResult<&[u8], Token> {
+  map_res(recognize(pair(alpha1, many0(alphanumeric1))), |s| {
+    let c = complete_byte_slice_str_from_utf8(s);
+    c.map(|syntax| match syntax {
+      "true" => Token::BoolLiteral(true),
+      "false" => Token::BoolLiteral(false),
+      "Nil" => Token::Nil,
+      "Inf" => Token::Inf,
+      _ => Token::Nil,
+    })
+  })(input)
+}
+
+fn lex_osc_path(input: &[u8]) -> IResult<&[u8], Token> {
   map_res(
     recognize(pair(
-      alt((alpha1, tag("_"), tag("-"), tag("/"))),
-      many0(alt((alphanumeric1, tag("_"), tag("-"), tag("/")))),
+      tag("/"),
+      many0(alt((
+        alphanumeric1,
+        tag("_"),
+        tag("-"),
+        tag("/"),
+        tag("*"),
+        tag("?"),
+        tag("!"),
+        tag("#"),
+        tag("["),
+        tag("]"),
+      ))),
     )),
     |s| {
       let c = complete_byte_slice_str_from_utf8(s);
-      c.map(|syntax| match syntax {
-        "true" => Token::BoolLiteral(true),
-        "false" => Token::BoolLiteral(false),
-        "Nil" => Token::Nil,
-        "Inf" => Token::Inf,
-        _ => match syntax.chars().next().unwrap() {
-          '/' => Token::OSCPath(syntax.to_string()),
-          _ => Token::Nil,
-        },
+      c.map(|syntax| match syntax.chars().next().unwrap() {
+        '/' => Token::OSCPath(syntax.to_string()),
+        _ => Token::Nil,
       })
     },
   )(input)
@@ -126,7 +141,7 @@ fn lex_reserved_ident(input: &[u8]) -> IResult<&[u8], Token> {
 // Integers parsing
 fn lex_integer(input: &[u8]) -> IResult<&[u8], Token> {
   map(
-    pair(opt(alt((tag("+"), tag("-")))), unsigned_int),
+    pair(opt(alt((tag("+"), tag("-")))), int_parser),
     |(sign, value)| {
       let s = sign
         .and_then(|s| if s[0] == b'-' { Some(-1i32) } else { None })
@@ -137,14 +152,14 @@ fn lex_integer(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-fn unsigned_int(input: &[u8]) -> IResult<&[u8], i32> {
+fn int_parser(input: &[u8]) -> IResult<&[u8], i32> {
   let int_str = map_res(terminated(digit1, opt(tag("_i32"))), str::from_utf8);
   map_res(int_str, FromStr::from_str)(input)
 }
 
 fn lex_long_integer(input: &[u8]) -> IResult<&[u8], Token> {
   map(
-    pair(opt(alt((tag("+"), tag("-")))), unsigned_long_int),
+    pair(opt(alt((tag("+"), tag("-")))), long_int_parser),
     |(sign, value)| {
       let s = sign
         .and_then(|s| if s[0] == b'-' { Some(-1i64) } else { None })
@@ -155,14 +170,14 @@ fn lex_long_integer(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-fn unsigned_long_int(input: &[u8]) -> IResult<&[u8], i64> {
+fn long_int_parser(input: &[u8]) -> IResult<&[u8], i64> {
   let int_str = map_res(terminated(digit1, tag("_i64")), str::from_utf8);
   map_res(int_str, FromStr::from_str)(input)
 }
 
 fn lex_float(input: &[u8]) -> IResult<&[u8], Token> {
   map(
-    pair(opt(alt((tag("+"), tag("-")))), unsigned_float),
+    pair(opt(alt((tag("+"), tag("-")))), float_parser),
     |(sign, value)| {
       let s = sign
         .and_then(|s| if s[0] == b'-' { Some(-1f32) } else { None })
@@ -173,7 +188,7 @@ fn lex_float(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-fn unsigned_float(input: &[u8]) -> IResult<&[u8], f32> {
+fn float_parser(input: &[u8]) -> IResult<&[u8], f32> {
   let float_bytes = recognize(alt((
     delimited(digit1, tag("."), opt(digit1)),
     delimited(opt(digit1), tag("."), digit1),
@@ -184,7 +199,7 @@ fn unsigned_float(input: &[u8]) -> IResult<&[u8], f32> {
 
 fn lex_double_float(input: &[u8]) -> IResult<&[u8], Token> {
   map(
-    pair(opt(alt((tag("+"), tag("-")))), unsigned_double_float),
+    pair(opt(alt((tag("+"), tag("-")))), double_parser),
     |(sign, value)| {
       let s = sign
         .and_then(|s| if s[0] == b'-' { Some(-1f64) } else { None })
@@ -195,7 +210,7 @@ fn lex_double_float(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-fn unsigned_double_float(input: &[u8]) -> IResult<&[u8], f64> {
+fn double_parser(input: &[u8]) -> IResult<&[u8], f64> {
   terminated(double, tag("_f64"))(input)
 }
 
@@ -229,8 +244,6 @@ pub fn lex_color(input: &[u8]) -> IResult<&[u8], Token> {
   Ok((remain.as_bytes(), Token::Color(col)))
 }
 
-// -------------------
-// /s_new ~2F14FA4C
 pub fn lex_midimsg(input: &[u8]) -> IResult<&[u8], Token> {
   let (_input, _) = tag("~")(input)?;
   let (remaining, (port, status, data1, data2)) =
@@ -247,8 +260,6 @@ pub fn lex_midimsg(input: &[u8]) -> IResult<&[u8], Token> {
   Ok((remaining.as_bytes(), Token::MidiMessage(msg)))
 }
 
-// -------------------
-// /s_new @123456789:20
 pub fn lex_timemsg(input: &[u8]) -> IResult<&[u8], Token> {
   let (_input, _) = tag("@")(input)?;
   let (remaining, (seconds, fractional)) = separated_pair(digit1, char1(':'), digit1)(_input)?;
@@ -265,10 +276,9 @@ pub fn lex_timemsg(input: &[u8]) -> IResult<&[u8], Token> {
   Ok((remaining, Token::TimeMsg(msg)))
 }
 
-// -------------------
-
 fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
   alt((
+    lex_osc_path,
     lex_punctuations,
     lex_blob,
     lex_string,

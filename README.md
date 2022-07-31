@@ -27,7 +27,7 @@ It has two simple features:
   - eg. `65.4321_f64` is equivalent to `65.4321 as f64` (`Explicit conversion`)
   - it will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`).
 - see supported types below.
-- complete osc example `/s_new "default after whitespace" 1002 'A' 12_i64 12.4533 -12 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true] %[0,255,12,]`
+- complete osc example `/s_new "default with whitespace" 1002 'A' 12_i32 12_i64 -12 -12_i32 -12_i64 12.4533 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true] %[0,255,12,]`
 
 ## Types
 `oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
@@ -59,9 +59,6 @@ It has two simple features:
   - x86_64-macos
   - x86_64-windows
 
-
-## Caveats
-- osc-path wildcard currently not support.
 
 ## ⚠️ Bypass security settings. (OSX)
 
