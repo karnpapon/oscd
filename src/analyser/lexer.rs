@@ -2,13 +2,15 @@ use std::cell::RefCell;
 use std::ops::Range;
 use std::{str, vec};
 
+use colored::Colorize;
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take, take_till1, take_while, take_while_m_n};
+use nom::bytes::complete::{tag, take, take_till1, take_while_m_n};
 use nom::character::complete::{
   alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0,
 };
-use nom::combinator::{cond, iterator, map, map_res, opt, recognize, ParserIterator};
-use nom::multi::many0;
+use nom::combinator::{cond, map, map_res, opt, recognize};
+use nom::error::{ErrorKind, ParseError};
+use nom::multi::{many0, separated_list0};
 use nom::number::complete::double;
 use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
 use nom::*;
@@ -45,15 +47,15 @@ impl<'a> State<'a> {
   }
 }
 
-// impl Error {
-//   pub fn get_string_range(&self) -> String {
-//     format!("({:?})", &self.0)
-//   }
+impl<'a> ParseError<&'a str> for Error {
+  fn from_error_kind(_: &'a str, kind: ErrorKind) -> Self {
+    Error(0..1, format!("error code was: {:?}", kind))
+  }
 
-//   pub fn get_err_msg(&self) -> String {
-//     self.1.clone()
-//   }
-// }
+  fn append(_: &'a str, kind: ErrorKind, other: Error) -> Self {
+    Error(0..1, format!("{:?}\nerror code was: {:?}", other, kind))
+  }
+}
 
 pub fn expect<'a, F, E, T>(
   mut parser: F,
@@ -145,22 +147,18 @@ fn lex_char(input: LocatedSpan) -> IResult<Token> {
 
 // --------- Blob<Vec<u8>> ---------
 
-// fn lex_blob(input: LocatedSpan) -> IResult<Token> {
-//   map(delimited(tag("%["), blobs, tag("]")), Token::Blob)(input)
-// }
-
-// fn blobs(input: LocatedSpan) -> IResult<Vec<u8>> {
-//   let mut it: ParserIterator<_, Error, _> = iterator(&input, terminated(digit1, tag(",")));
-
-//   // let parsed = it.map(|v| v);
-//   // let v = parsed
-//   //   .into_iter()
-//   //   .map(|p| p.to_string().parse::<u8>().unwrap())
-//   //   .collect::<Vec<_>>();
-//   it.finish();
-
-//   Ok((input, Vec::new()))
-// }
+fn lex_blob(input: LocatedSpan) -> IResult<Token> {
+  map(
+    delimited(tag("%["), separated_list0(tag(","), digit1), tag("]")),
+    |x: Vec<LocatedSpan>| {
+      let vv = x
+        .into_iter()
+        .filter_map(|e| e.fragment().parse::<u8>().ok())
+        .collect();
+      Token::Blob(vv)
+    },
+  )(input)
+}
 
 // --------- Ident (Bool, Nil, Inf) ---------
 fn lex_reserved_ident(input: LocatedSpan) -> IResult<Token> {
@@ -380,7 +378,10 @@ pub fn lex_timemsg(input: LocatedSpan) -> IResult<Token> {
 
 fn lex_error(input: LocatedSpan) -> IResult<Token> {
   map(take_till1(|c| c == '\n'), |span: LocatedSpan| {
-    let err = Error(span.to_range(), span.fragment().to_string());
+    let err = Error(
+      span.to_range(),
+      format!("Unexpected: `{}`", span.fragment()),
+    );
     span.extra.report_error(err);
     Token::Illegal
   })(input)
@@ -390,7 +391,7 @@ fn lex_token(input: LocatedSpan) -> IResult<Token> {
   alt((
     lex_osc_path,
     lex_punctuations,
-    // lex_blob,
+    lex_blob,
     lex_string,
     lex_timemsg,
     lex_midimsg,
