@@ -45,15 +45,15 @@ impl<'a> State<'a> {
   }
 }
 
-impl Error {
-  pub fn get_string_range(&self) -> String {
-    format!("({:?})", &self.0)
-  }
+// impl Error {
+//   pub fn get_string_range(&self) -> String {
+//     format!("({:?})", &self.0)
+//   }
 
-  pub fn get_err_msg(&self) -> String {
-    self.1.clone()
-  }
-}
+//   pub fn get_err_msg(&self) -> String {
+//     self.1.clone()
+//   }
+// }
 
 pub fn expect<'a, F, E, T>(
   mut parser: F,
@@ -171,7 +171,7 @@ fn lex_reserved_ident(input: LocatedSpan) -> IResult<Token> {
       "false" => Token::BoolLiteral(false),
       "Nil" => Token::Nil,
       "Inf" => Token::Inf,
-      _ => Token::Ident(span.to_string()),
+      _ => Token::Illegal,
     },
   )(input)
 }
@@ -416,7 +416,7 @@ impl Lexer {
     lex_tokens(input).map(|(slice, result)| (slice, [&result[..], &vec![Token::EOF][..]].concat()))
   }
 
-  pub fn lext_parse_main(source: &str) -> (Vec<Token>, Vec<Error>) {
+  pub fn analyse(source: &str) -> (Vec<Token>, Vec<Error>) {
     let errors = RefCell::new(Vec::new());
     let input = LocatedSpan::new_extra(source, State(&errors));
     let (_, expr) = Self::lex_tokens(input).unwrap();

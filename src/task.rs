@@ -36,66 +36,63 @@ pub fn monitor(port: u16) {
 }
 
 pub fn send(port: u16, address: String) {
-  let mut screen = AlternateScreen::from(stdout());
-  println!( "{}",
-    &format!( "{} {} {} {} {} {} {} {} {}{}",
-      format!("Sending OSC messages to {:?}: {:?} \n",address, port).bold().white().dimmed(),
-      "Use the following format to send messages: <address> <value>\n".white().dimmed(),
-      "- <address> is osc path to communicate with\n".white().dimmed(),
-      "- <value> is a number or a string without wrapping in double quotes (can have multiple values) \n".white().dimmed(),
-      " . Example:".white().dimmed(), "/s_new \"default\" -1 0 0 \"freq\" 850\n".white().dimmed(),
-      " . will be parsed as".white().dimmed(), "(\"s_new\",[String(\"default\"), Int(-1), Int(0), Int(0), String(\"freq\"), Int(850)])\n".white().dimmed(),
-      "- to exit = Ctrl-C".white().dimmed(),
-      "\n",
-    ).dimmed()
-  );
-  screen.flush().unwrap();
+  // let mut screen = AlternateScreen::from(stdout());
+  // println!( "{}",
+  //   &format!( "{} {} {} {} {} {} {} {} {}{}",
+  //     format!("Sending OSC messages to {:?}: {:?} \n",address, port).bold().white().dimmed(),
+  //     "Use the following format to send messages: <address> <value>\n".white().dimmed(),
+  //     "- <address> is osc path to communicate with\n".white().dimmed(),
+  //     "- <value> is a number or a string without wrapping in double quotes (can have multiple values) \n".white().dimmed(),
+  //     " . Example:".white().dimmed(), "/s_new \"default\" -1 0 0 \"freq\" 850\n".white().dimmed(),
+  //     " . will be parsed as".white().dimmed(), "(\"s_new\",[String(\"default\"), Int(-1), Int(0), Int(0), String(\"freq\"), Int(850)])\n".white().dimmed(),
+  //     "- to exit = Ctrl-C".white().dimmed(),
+  //     "\n",
+  //   ).dimmed()
+  // );
+  // screen.flush().unwrap();
 
-  let handler = thread::spawn(move || loop {
-    // loop {
+  // let handler = thread::spawn(move || loop {
+  loop {
     let msg = Text::new("");
     let osc_msg = msg
       .with_render_config(prompt::get_render_config())
       .prompt()
       .unwrap();
-    let (osc_msg_vec, lex_error) = Lexer::lext_parse_main(&osc_msg);
+    let (osc_msg_vec, lex_error) = Lexer::analyse(&osc_msg);
 
     let tokens = Tokens::new(&osc_msg_vec);
     let vec = Vec::new();
-    let (ff, stmt) = Parser::parse_tokens(tokens).unwrap_or((Tokens::new(&vec), Vec::new()));
+    let (_, stmt) = Parser::parse_tokens(tokens).unwrap_or((Tokens::new(&vec), Vec::new()));
 
     match stmt.split_first() {
       Some((first, tail)) => {
-        let osc_path = match first {
-          Stmt::ExprStmt(stmt) => match stmt {
-            Expr::Lit(Literal::OscPath(path)) => path,
-            _ => "/osc/adress/is/needed",
-          },
+        match first {
+          Stmt::ExprStmt(Expr::Lit(Literal::OscPath(osc_path))) => {
+            let argument_msg = tail
+              .iter()
+              .map(|x| match x {
+                Stmt::ExprStmt(v) => parse_message(v),
+              })
+              .collect::<Vec<OscType>>();
+            send_packet(port, address.clone(), osc_path, argument_msg);
+          }
+          _ => println!(
+            "{}{}",
+            "[ERROR]: ".to_string().red().dimmed(),
+            "osc path should start with / eg. /s_new".white().dimmed()
+          ),
         };
-        let argument_msg = tail
-          .iter()
-          .map(|x| match x {
-            Stmt::ExprStmt(v) => parse_message(v),
-          })
-          .collect::<Vec<OscType>>();
-        send_packet(port, address.clone(), osc_path, argument_msg);
       }
       None => println!(
         "{}{}",
         "[ERROR]: ".to_string().red().dimmed(),
-        format!(
-          "parsing msg at position {:?}, unexpected: {:?}",
-          lex_error[0].get_string_range(),
-          lex_error[0].get_err_msg()
-        )
-        .white()
-        .dimmed()
+        format!("parsing msg {:?}", lex_error,).white().dimmed()
       ),
     }
-    // }
-  });
+  }
+  // });
 
-  handler.join().unwrap();
+  // handler.join().unwrap();
 }
 
 pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<OscType>) {
