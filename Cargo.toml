@@ -17,3 +17,4 @@ inquire = { version = "0.2.1"}
 rosc = "0.8.1"
 clap = "3.2.15"
 nom = "7.1.1"
+nom_locate = "4.0.0"

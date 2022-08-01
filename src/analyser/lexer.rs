@@ -1,34 +1,98 @@
-use std::str::FromStr;
-use std::str::Utf8Error;
+use std::cell::RefCell;
+use std::ops::Range;
 use std::{str, vec};
 
-use nom::branch::*;
-use nom::bytes::complete::{tag, take, take_while_m_n};
+use colored::Colorize;
+use nom::branch::alt;
+use nom::bytes::complete::{tag, take, take_till1, take_while_m_n};
 use nom::character::complete::{
   alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0,
 };
-use nom::combinator::{cond, iterator, map, map_res, opt, recognize};
-use nom::multi::many0;
+use nom::combinator::{cond, map, map_res, opt, recognize};
+use nom::error::{ErrorKind, ParseError};
+use nom::multi::{many0, separated_list0};
 use nom::number::complete::double;
 use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
 use nom::*;
 
 use super::token::{Color, MidiMsg, TimeMsg, Token};
 
+// ------- custom error handling for fault-torelant parser ----------
+// https://eyalkalderon.com/blog/nom-error-recovery/
+
+pub type LocatedSpan<'a> = nom_locate::LocatedSpan<&'a str, State<'a>>;
+pub type IResult<'a, T> = nom::IResult<LocatedSpan<'a>, T>;
+
+trait ToRange {
+  fn to_range(&self) -> Range<usize>;
+}
+
+impl<'a> ToRange for LocatedSpan<'a> {
+  fn to_range(&self) -> Range<usize> {
+    let start = self.location_offset();
+    let end = start + self.fragment().len();
+    start..end
+  }
+}
+
+#[derive(Debug)]
+pub struct Error(Range<usize>, String);
+
+#[derive(Clone, Debug)]
+pub struct State<'a>(pub &'a RefCell<Vec<Error>>);
+
+impl<'a> State<'a> {
+  pub fn report_error(&self, error: Error) {
+    self.0.borrow_mut().push(error);
+  }
+}
+
+impl<'a> ParseError<&'a str> for Error {
+  fn from_error_kind(_: &'a str, kind: ErrorKind) -> Self {
+    Error(0..1, format!("error code was: {:?}", kind))
+  }
+
+  fn append(_: &'a str, kind: ErrorKind, other: Error) -> Self {
+    Error(0..1, format!("{:?}\nerror code was: {:?}", other, kind))
+  }
+}
+
+pub fn expect<'a, F, E, T>(
+  mut parser: F,
+  error_msg: E,
+) -> impl FnMut(LocatedSpan<'a>) -> IResult<Option<T>>
+where
+  F: FnMut(LocatedSpan<'a>) -> IResult<T>,
+  E: ToString,
+{
+  move |input| match parser(input) {
+    Ok((remaining, out)) => Ok((remaining, Some(out))),
+    Err(nom::Err::Error(input)) | Err(nom::Err::Failure(input)) => {
+      let err = Error(input.input.to_range(), error_msg.to_string());
+      input.input.extra.report_error(err);
+      Ok((input.input, None))
+    }
+    Err(err) => Err(err),
+  }
+}
+
+// -------------------------------------------
+
 macro_rules! syntax {
   ($func_name: ident, $tag_string: literal, $output_token: expr) => {
-    fn $func_name<'a>(s: &'a [u8]) -> IResult<&[u8], Token> {
+    fn $func_name(s: LocatedSpan) -> IResult<Token> {
       map(tag($tag_string), |_| $output_token)(s)
     }
   };
 }
 
-// punctuations
+// --------- punctuations ---------
+
 syntax! {comma_punctuation, ",", Token::Comma}
 syntax! {lbracket_punctuation, "[", Token::LBracket}
 syntax! {rbracket_punctuation, "]", Token::RBracket}
 
-pub fn lex_punctuations(input: &[u8]) -> IResult<&[u8], Token> {
+pub fn lex_punctuations(input: LocatedSpan) -> IResult<Token> {
   alt((
     comma_punctuation,
     lbracket_punctuation,
@@ -36,13 +100,13 @@ pub fn lex_punctuations(input: &[u8]) -> IResult<&[u8], Token> {
   ))(input)
 }
 
-// Strings
-fn pis(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-  use std::result::Result::*;
+// --------- String ---------
+fn pis(input: LocatedSpan) -> IResult<Vec<u8>> {
+  let inp = input.clone();
 
   let (i1, c1) = take(1usize)(input)?;
   match c1.as_bytes() {
-    b"\"" => Ok((input, vec![])),
+    b"\"" => Ok((inp, vec![])),
     c => pis(i1).map(|(slice, done)| (slice, concat_slice_vec(c, done))),
   }
 }
@@ -53,24 +117,24 @@ fn concat_slice_vec(c: &[u8], done: Vec<u8>) -> Vec<u8> {
   new_vec
 }
 
-fn convert_vec_utf8(v: Vec<u8>) -> Result<String, Utf8Error> {
+fn convert_vec_utf8(v: Vec<u8>) -> String {
   let slice = v.as_slice();
-  str::from_utf8(slice).map(|s| s.to_owned())
+  let ss = str::from_utf8(slice).unwrap();
+  ss.to_owned()
 }
 
-fn complete_byte_slice_str_from_utf8(c: &[u8]) -> Result<&str, Utf8Error> {
-  str::from_utf8(c)
+fn string(input: LocatedSpan) -> IResult<String> {
+  let st = delimited(tag("\""), map(pis, convert_vec_utf8), tag("\""));
+  map(st, |s| s)(input)
 }
 
-fn string(input: &[u8]) -> IResult<&[u8], String> {
-  delimited(tag("\""), map_res(pis, convert_vec_utf8), tag("\""))(input)
-}
-
-fn lex_string(input: &[u8]) -> IResult<&[u8], Token> {
+fn lex_string(input: LocatedSpan) -> IResult<Token> {
   map(string, Token::StringLiteral)(input)
 }
 
-fn lex_char(input: &[u8]) -> IResult<&[u8], Token> {
+// ------------- Char -------------
+
+fn lex_char(input: LocatedSpan) -> IResult<Token> {
   map(
     delimited(
       tag("\'"),
@@ -81,38 +145,39 @@ fn lex_char(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-fn lex_blob(input: &[u8]) -> IResult<&[u8], Token> {
-  map(delimited(tag("%["), blobs, tag("]")), Token::Blob)(input)
+// --------- Blob<Vec<u8>> ---------
+
+fn lex_blob(input: LocatedSpan) -> IResult<Token> {
+  map(
+    delimited(tag("%["), separated_list0(tag(","), digit1), tag("]")),
+    |x: Vec<LocatedSpan>| {
+      let vv = x
+        .into_iter()
+        .filter_map(|e| e.fragment().parse::<u8>().ok())
+        .collect();
+      Token::Blob(vv)
+    },
+  )(input)
 }
 
-fn blobs(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-  let mut it = iterator(input, terminated(digit1, tag(",")));
-
-  let parsed = it.map(|v| str::from_utf8(v).unwrap());
-  let byte1 = parsed
-    .into_iter()
-    .map(|p| p.parse::<u8>().unwrap())
-    .collect::<Vec<_>>();
-  let res: IResult<_, _> = it.finish();
-
-  Ok((res.unwrap().0, byte1))
-}
-
-fn lex_reserved_ident(input: &[u8]) -> IResult<&[u8], Token> {
-  map_res(recognize(pair(alpha1, many0(alphanumeric1))), |s| {
-    let c = complete_byte_slice_str_from_utf8(s);
-    c.map(|syntax| match syntax {
+// --------- Ident (Bool, Nil, Inf) ---------
+fn lex_reserved_ident(input: LocatedSpan) -> IResult<Token> {
+  map(
+    recognize(pair(alpha1, many0(alphanumeric1))),
+    |span: LocatedSpan| match *span {
       "true" => Token::BoolLiteral(true),
       "false" => Token::BoolLiteral(false),
       "Nil" => Token::Nil,
       "Inf" => Token::Inf,
-      _ => Token::Nil,
-    })
-  })(input)
+      _ => Token::Illegal,
+    },
+  )(input)
 }
 
-fn lex_osc_path(input: &[u8]) -> IResult<&[u8], Token> {
-  map_res(
+// --------- osc_path ---------
+
+fn lex_osc_path(input: LocatedSpan) -> IResult<Token> {
+  map(
     recognize(pair(
       tag("/"),
       many0(alt((
@@ -128,23 +193,27 @@ fn lex_osc_path(input: &[u8]) -> IResult<&[u8], Token> {
         tag("]"),
       ))),
     )),
-    |s| {
-      let c = complete_byte_slice_str_from_utf8(s);
-      c.map(|syntax| match syntax.chars().next().unwrap() {
-        '/' => Token::OSCPath(syntax.to_string()),
-        _ => Token::Nil,
-      })
+    |s: LocatedSpan| match s.chars().next().unwrap() {
+      '/' => Token::OSCPath(s.fragment().to_string()),
+      _ => Token::Nil,
     },
   )(input)
 }
 
-// Integers parsing
-fn lex_integer(input: &[u8]) -> IResult<&[u8], Token> {
+// --------- Int(i32) ---------
+
+fn lex_integer(input: LocatedSpan) -> IResult<Token> {
   map(
     pair(opt(alt((tag("+"), tag("-")))), int_parser),
     |(sign, value)| {
       let s = sign
-        .and_then(|s| if s[0] == b'-' { Some(-1i32) } else { None })
+        .and_then(|s| {
+          if s.starts_with('-') {
+            Some(-1i32)
+          } else {
+            None
+          }
+        })
         .unwrap_or(1i32)
         * value;
       Token::IntLiteral(s)
@@ -152,17 +221,27 @@ fn lex_integer(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-fn int_parser(input: &[u8]) -> IResult<&[u8], i32> {
-  let int_str = map_res(terminated(digit1, opt(tag("_i32"))), str::from_utf8);
-  map_res(int_str, FromStr::from_str)(input)
+fn int_parser(input: LocatedSpan) -> IResult<i32> {
+  map(terminated(digit1, opt(tag("_i32"))), |s: LocatedSpan| {
+    let s = s.fragment().to_string();
+    s.parse::<i32>().unwrap()
+  })(input)
 }
 
-fn lex_long_integer(input: &[u8]) -> IResult<&[u8], Token> {
+// --------- Long(i64) ---------
+
+fn lex_long_integer(input: LocatedSpan) -> IResult<Token> {
   map(
     pair(opt(alt((tag("+"), tag("-")))), long_int_parser),
     |(sign, value)| {
       let s = sign
-        .and_then(|s| if s[0] == b'-' { Some(-1i64) } else { None })
+        .and_then(|s| {
+          if s.starts_with('-') {
+            Some(-1i64)
+          } else {
+            None
+          }
+        })
         .unwrap_or(1i64)
         * value;
       Token::Long(s)
@@ -170,17 +249,27 @@ fn lex_long_integer(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-fn long_int_parser(input: &[u8]) -> IResult<&[u8], i64> {
-  let int_str = map_res(terminated(digit1, tag("_i64")), str::from_utf8);
-  map_res(int_str, FromStr::from_str)(input)
+fn long_int_parser(input: LocatedSpan) -> IResult<i64> {
+  map(terminated(digit1, tag("_i64")), |s: LocatedSpan| {
+    let s = s.fragment().to_string();
+    s.parse::<i64>().unwrap()
+  })(input)
 }
 
-fn lex_float(input: &[u8]) -> IResult<&[u8], Token> {
+// --------- Float(i32) ---------
+
+fn lex_float(input: LocatedSpan) -> IResult<Token> {
   map(
     pair(opt(alt((tag("+"), tag("-")))), float_parser),
     |(sign, value)| {
       let s = sign
-        .and_then(|s| if s[0] == b'-' { Some(-1f32) } else { None })
+        .and_then(|s| {
+          if s.starts_with('-') {
+            Some(-1f32)
+          } else {
+            None
+          }
+        })
         .unwrap_or(1f32)
         * value;
       Token::FloatLiteral(s)
@@ -188,21 +277,34 @@ fn lex_float(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-fn float_parser(input: &[u8]) -> IResult<&[u8], f32> {
+fn float_parser(input: LocatedSpan) -> IResult<f32> {
   let float_bytes = recognize(alt((
     delimited(digit1, tag("."), opt(digit1)),
     delimited(opt(digit1), tag("."), digit1),
   )));
-  let float_str = map_res(terminated(float_bytes, opt(tag("_f32"))), str::from_utf8);
-  map_res(float_str, FromStr::from_str)(input)
+  map(
+    terminated(float_bytes, opt(tag("_f32"))),
+    |s: LocatedSpan| {
+      let s = s.fragment().to_string();
+      s.parse::<f32>().unwrap()
+    },
+  )(input)
 }
 
-fn lex_double_float(input: &[u8]) -> IResult<&[u8], Token> {
+// --------- Float(f64) ---------
+
+fn lex_double_float(input: LocatedSpan) -> IResult<Token> {
   map(
     pair(opt(alt((tag("+"), tag("-")))), double_parser),
     |(sign, value)| {
       let s = sign
-        .and_then(|s| if s[0] == b'-' { Some(-1f64) } else { None })
+        .and_then(|s| {
+          if s.starts_with('-') {
+            Some(-1f64)
+          } else {
+            None
+          }
+        })
         .unwrap_or(1f64)
         * value;
       Token::Double(s)
@@ -210,73 +312,82 @@ fn lex_double_float(input: &[u8]) -> IResult<&[u8], Token> {
   )(input)
 }
 
-fn double_parser(input: &[u8]) -> IResult<&[u8], f64> {
+fn double_parser(input: LocatedSpan) -> IResult<f64> {
   terminated(double, tag("_f64"))(input)
 }
 
-fn lex_illegal(input: &[u8]) -> IResult<&[u8], Token> {
-  map(take(1usize), |_| Token::Illegal)(input)
-}
+// --------- Color ---------
 
-fn from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
-  u8::from_str_radix(input, 16)
+fn from_hex(input: LocatedSpan) -> IResult<u8> {
+  let hex = u8::from_str_radix(*input, 16);
+  Ok((input, hex.unwrap()))
 }
 
 fn is_hex_digit(c: char) -> bool {
   c.is_ascii_hexdigit()
 }
 
-fn hex_primary(input: &str) -> IResult<&str, u8> {
-  map_res(take_while_m_n(2, 2, is_hex_digit), from_hex)(input)
+fn hex_primary(input: LocatedSpan) -> IResult<u8> {
+  map(take_while_m_n(2, 2, is_hex_digit), |s| {
+    from_hex(s).unwrap().1
+  })(input)
 }
 
-pub fn lex_color(input: &[u8]) -> IResult<&[u8], Token> {
+pub fn lex_color(input: LocatedSpan) -> IResult<Token> {
   let (inp, _) = tag("#")(input)?;
   let (remain, (red, green, blue, alpha)) =
-    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(std::str::from_utf8(inp).unwrap())
-      .unwrap();
+    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(inp).unwrap();
   let col = Color {
     red,
     green,
     blue,
     alpha,
   };
-  Ok((remain.as_bytes(), Token::Color(col)))
+
+  Ok((remain, Token::Color(col)))
 }
 
-pub fn lex_midimsg(input: &[u8]) -> IResult<&[u8], Token> {
-  let (_input, _) = tag("~")(input)?;
-  let (remaining, (port, status, data1, data2)) =
-    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(
-      std::str::from_utf8(_input).unwrap(),
-    )
-    .unwrap();
+// --------- MidiMsg ---------
+
+pub fn lex_midimsg(input: LocatedSpan) -> IResult<Token> {
+  let (inp, _) = tag("~")(input)?;
+  let (remain, (port, status, data1, data2)) =
+    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(inp).unwrap();
   let msg = MidiMsg {
     port,
     status,
     data1,
     data2,
   };
-  Ok((remaining.as_bytes(), Token::MidiMessage(msg)))
+  Ok((remain, Token::MidiMessage(msg)))
 }
 
-pub fn lex_timemsg(input: &[u8]) -> IResult<&[u8], Token> {
-  let (_input, _) = tag("@")(input)?;
-  let (remaining, (seconds, fractional)) = separated_pair(digit1, char1(':'), digit1)(_input)?;
+// --------- TimeMsg ---------
+
+pub fn lex_timemsg(input: LocatedSpan) -> IResult<Token> {
+  let (inp, _) = tag("@")(input)?;
+  let (remaining, (seconds, fractional)) = separated_pair(digit1, char1(':'), digit1)(inp)?;
   let msg = TimeMsg {
-    seconds: std::str::from_utf8(seconds)
-      .unwrap()
-      .parse::<u32>()
-      .unwrap(),
-    fractional: std::str::from_utf8(fractional)
-      .unwrap()
-      .parse::<u32>()
-      .unwrap(),
+    seconds: seconds.parse::<u32>().unwrap(),
+    fractional: fractional.parse::<u32>().unwrap(),
   };
   Ok((remaining, Token::TimeMsg(msg)))
 }
 
-fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
+// --------- Error ---------
+
+fn lex_error(input: LocatedSpan) -> IResult<Token> {
+  map(take_till1(|c| c == '\n'), |span: LocatedSpan| {
+    let err = Error(
+      span.to_range(),
+      format!("Unexpected: `{}`", span.fragment()),
+    );
+    span.extra.report_error(err);
+    Token::Illegal
+  })(input)
+}
+
+fn lex_token(input: LocatedSpan) -> IResult<Token> {
   alt((
     lex_osc_path,
     lex_punctuations,
@@ -291,18 +402,25 @@ fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
     lex_integer,
     lex_reserved_ident,
     lex_char,
-    lex_illegal,
+    lex_error,
   ))(input)
 }
 
-fn lex_tokens(input: &[u8]) -> IResult<&[u8], Vec<Token>> {
+fn lex_tokens(input: LocatedSpan) -> IResult<Vec<Token>> {
   many0(delimited(multispace0, lex_token, multispace0))(input)
 }
 
 pub struct Lexer;
 
 impl Lexer {
-  pub fn lex_tokens(bytes: &[u8]) -> IResult<&[u8], Vec<Token>> {
-    lex_tokens(bytes).map(|(slice, result)| (slice, [&result[..], &vec![Token::EOF][..]].concat()))
+  pub fn lex_tokens(input: LocatedSpan) -> IResult<Vec<Token>> {
+    lex_tokens(input).map(|(slice, result)| (slice, [&result[..], &vec![Token::EOF][..]].concat()))
+  }
+
+  pub fn analyse(source: &str) -> (Vec<Token>, Vec<Error>) {
+    let errors = RefCell::new(Vec::new());
+    let input = LocatedSpan::new_extra(source, State(&errors));
+    let (_, expr) = Self::lex_tokens(input).unwrap();
+    (expr, errors.into_inner())
   }
 }

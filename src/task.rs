@@ -38,7 +38,7 @@ pub fn monitor(port: u16) {
 pub fn send(port: u16, address: String) {
   let mut screen = AlternateScreen::from(stdout());
   println!( "{}",
-    &format!( "{} {} {} {} {} {} {} {} {}",
+    &format!( "{} {} {} {} {} {} {} {} {}{}",
       format!("Sending OSC messages to {:?}: {:?} \n",address, port).bold().white().dimmed(),
       "Use the following format to send messages: <address> <value>\n".white().dimmed(),
       "- <address> is osc path to communicate with\n".white().dimmed(),
@@ -46,6 +46,7 @@ pub fn send(port: u16, address: String) {
       " . Example:".white().dimmed(), "/s_new \"default\" -1 0 0 \"freq\" 850\n".white().dimmed(),
       " . will be parsed as".white().dimmed(), "(\"s_new\",[String(\"default\"), Int(-1), Int(0), Int(0), String(\"freq\"), Int(850)])\n".white().dimmed(),
       "- to exit = Ctrl-C".white().dimmed(),
+      "\n",
     ).dimmed()
   );
   screen.flush().unwrap();
@@ -57,43 +58,37 @@ pub fn send(port: u16, address: String) {
       .with_render_config(prompt::get_render_config())
       .prompt()
       .unwrap();
-    let osc_msg_vec = Lexer::lex_tokens(osc_msg.as_bytes()).finish().unwrap();
+    let (osc_msg_vec, lex_error) = Lexer::analyse(&osc_msg);
 
-    let tokens = Tokens::new(&osc_msg_vec.1);
-    let (_, stmt) = Parser::parse_tokens(tokens).unwrap_or((Tokens::new(&Vec::new()), Vec::new()));
+    let tokens = Tokens::new(&osc_msg_vec);
+    let vec = Vec::new();
+    let (_, stmt) = Parser::parse_tokens(tokens).unwrap_or((Tokens::new(&vec), Vec::new()));
 
     match stmt.split_first() {
       Some((first, tail)) => {
-        let osc_path = match first {
-          Stmt::ExprStmt(stmt) => match stmt {
-            Expr::Lit(Literal::OscPath(path)) => path,
-            // Expr::Ident(Ident(val)) => val,
-            _ => "/osc/adress/is/needed",
-          },
+        match first {
+          Stmt::ExprStmt(Expr::Lit(Literal::OscPath(osc_path))) => {
+            let argument_msg = tail
+              .iter()
+              .map(|x| match x {
+                Stmt::ExprStmt(v) => parse_message(v),
+              })
+              .collect::<Vec<OscType>>();
+            send_packet(port, address.clone(), osc_path, argument_msg);
+          }
+          _ => println!(
+            "{}{}",
+            "[ERROR]: ".to_string().red().dimmed(),
+            "osc path should start with / eg. /s_new".white().dimmed()
+          ),
         };
-        // if (osc_path) == ":q" {
-        //   break;
-        // }
-        let argument_msg = tail
-          .iter()
-          .map(|x| match x {
-            Stmt::ExprStmt(v) => parse_message(v),
-          })
-          .collect::<Vec<OscType>>();
-        send_packet(port, address.clone(), osc_path, argument_msg);
       }
       None => println!(
         "{}{}",
         "[ERROR]: ".to_string().red().dimmed(),
-        format!(
-          "parsing msg `{:?}` : please check if argument is valid.",
-          tokens
-        )
-        .white()
-        .dimmed()
+        format!("parsing msg {:?}", lex_error,).white().dimmed()
       ),
     }
-
     // }
   });
 

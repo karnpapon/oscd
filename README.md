@@ -5,7 +5,7 @@
 
 `oscd`, a simple interactive [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) debugger for the terminal by using [nom](https://github.com/Geal/nom) as a lexer/parser, `oscd` offers auto type casting and support sending multiple osc arguments. 
 
-<img src="./screenshots/ss4.gif">
+<img src="./screenshots/ss5.gif">
 
 It has two simple features:
 
@@ -27,7 +27,7 @@ It has two simple features:
   - eg. `65.4321_f64` is equivalent to `65.4321 as f64` (`Explicit conversion`)
   - it will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`).
 - see supported types below.
-- complete osc example `/s_new "default with whitespace" 1002 'A' 12_i32 12_i64 -12 -12_i32 -12_i64 12.4533 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true] %[0,255,12,]`
+- complete osc example `/s_new "default with whitespace" 1002 'A' 12_i32 12_i64 -12 -12_i32 -12_i64 12.4533 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true] %[10,20,30]`
 
 ## Types
 `oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
@@ -41,7 +41,7 @@ It has two simple features:
 | &#9745; | String(String)       | `"str goes here"`                  | wrapped in doulble quotes is needed                                         |
 | &#9745; | Bool(bool)           | `true` or `false`                  |                                                                             |
 | &#9745; | Char(char)           |  `'S'`                             | wrapped in single quote is needed                                           |
-| &#9745; | Blob(Vec&#60;u8>)    | `%[10,20,30,]`                     | prefix with `%` and suffix with `,` after last item is needed.              |
+| &#9745; | Blob(Vec&#60;u8>)    | `%[10,20,30]`                      | prefix with `%` separated by `,` number which is not `u8` will be discarded |
 | &#9745; | Time(OscTime)        | `@123456789:20`                    | prefix with `@` separate fractional by `:` eg. `@<seconds>:<fractional>`    |
 | &#9745; | Color(OscColor)      | `#2F14DF2A`                        | prefix with `#` followed by base16 `#<red><green><blue><alpha>`             |
 | &#9745; | Midi(OscMidiMessage) | `~01F14FA4`                        | prefix with `~` followed by base16 `~<port><status><data1><data2>`          |
