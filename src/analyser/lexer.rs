@@ -2,14 +2,12 @@ use std::cell::RefCell;
 use std::ops::Range;
 use std::{str, vec};
 
-use colored::Colorize;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_till1, take_while_m_n};
 use nom::character::complete::{
   alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0,
 };
-use nom::combinator::{cond, map, map_res, opt, recognize};
-use nom::error::{ErrorKind, ParseError};
+use nom::combinator::{cond, map, opt, recognize};
 use nom::multi::{many0, separated_list0};
 use nom::number::complete::double;
 use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
@@ -44,16 +42,6 @@ pub struct State<'a>(pub &'a RefCell<Vec<Error>>);
 impl<'a> State<'a> {
   pub fn report_error(&self, error: Error) {
     self.0.borrow_mut().push(error);
-  }
-}
-
-impl<'a> ParseError<&'a str> for Error {
-  fn from_error_kind(_: &'a str, kind: ErrorKind) -> Self {
-    Error(0..1, format!("error code was: {:?}", kind))
-  }
-
-  fn append(_: &'a str, kind: ErrorKind, other: Error) -> Self {
-    Error(0..1, format!("{:?}\nerror code was: {:?}", other, kind))
   }
 }
 
@@ -318,9 +306,8 @@ fn double_parser(input: LocatedSpan) -> IResult<f64> {
 
 // --------- Color ---------
 
-fn from_hex(input: LocatedSpan) -> IResult<u8> {
-  let hex = u8::from_str_radix(*input, 16);
-  Ok((input, hex.unwrap()))
+fn from_hex(input: LocatedSpan) -> Result<u8, std::num::ParseIntError> {
+  u8::from_str_radix(*input, 16)
 }
 
 fn is_hex_digit(c: char) -> bool {
@@ -328,15 +315,19 @@ fn is_hex_digit(c: char) -> bool {
 }
 
 fn hex_primary(input: LocatedSpan) -> IResult<u8> {
-  map(take_while_m_n(2, 2, is_hex_digit), |s| {
-    from_hex(s).unwrap().1
+  map(take_while_m_n(2, 2, is_hex_digit), |s| match from_hex(s) {
+    Ok(v) => v,
+    Err(e) => {
+      println!("parsing from_hex error {}", e);
+      0u8
+    }
   })(input)
 }
 
 pub fn lex_color(input: LocatedSpan) -> IResult<Token> {
   let (inp, _) = tag("#")(input)?;
   let (remain, (red, green, blue, alpha)) =
-    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(inp).unwrap();
+    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(inp)?;
   let col = Color {
     red,
     green,
@@ -352,7 +343,7 @@ pub fn lex_color(input: LocatedSpan) -> IResult<Token> {
 pub fn lex_midimsg(input: LocatedSpan) -> IResult<Token> {
   let (inp, _) = tag("~")(input)?;
   let (remain, (port, status, data1, data2)) =
-    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(inp).unwrap();
+    tuple((hex_primary, hex_primary, hex_primary, hex_primary))(inp)?;
   let msg = MidiMsg {
     port,
     status,

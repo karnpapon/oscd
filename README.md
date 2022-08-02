@@ -27,7 +27,7 @@ It has two simple features:
   - eg. `65.4321_f64` is equivalent to `65.4321 as f64` (`Explicit conversion`)
   - it will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`).
 - see supported types below.
-- complete osc example `/s_new "default with whitespace" 1002 'A' 12_i32 12_i64 -12 -12_i32 -12_i64 12.4533 1.234_f64 #2f14DF12 ~7C3a4dAB @12345:23 [12,20,true] %[10,20,30]`
+- complete osc example `/s_new "default with whitespace" 1002 'A' 12_i32 12_i64 -12 -12_i32 -12_i64 12.4533 1.234_f64 #2f14DF12 ~00110011 @12345:23 [12,20,true] %[10,20,30]`
 
 ## Types
 `oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
