@@ -1,7 +1,5 @@
 use colored::*;
 use inquire::Text;
-use nom::Finish;
-// use nannou_osc as osc;
 use rosc::OscType;
 use std::fmt;
 use std::io::{stdout, Write};
@@ -64,8 +62,8 @@ pub fn send(port: u16, address: String) {
     let vec = Vec::new();
     let (_, stmt) = Parser::parse_tokens(tokens).unwrap_or((Tokens::new(&vec), Vec::new()));
 
-    match stmt.split_first() {
-      Some((first, tail)) => {
+    match (stmt.split_first(), lex_error.is_empty()) {
+      (Some((first, tail)), true) => {
         match first {
           Stmt::ExprStmt(Expr::Lit(Literal::OscPath(osc_path))) => {
             let argument_msg = tail
@@ -83,7 +81,7 @@ pub fn send(port: u16, address: String) {
           ),
         };
       }
-      None => println!(
+      (_, _) => println!(
         "{}{}",
         "[ERROR]: ".to_string().red().dimmed(),
         format!("parsing msg {:?}", lex_error,).white().dimmed()

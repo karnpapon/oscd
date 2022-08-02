@@ -15,7 +15,7 @@ It has two simple features:
   - default address = `127.0.0.1`
 
 ## Install / Run
-- easiest way is to download [released binary files](https://github.com/karnpapon/oscd/releases), unzip and put it where executable file lives based on your Operating System eg. `usr/local/bin` (for OSX)
+- easiest way is to download [latest released binary files](https://github.com/karnpapon/oscd/releases), unzip and put it where executable file lives based on your Operating System eg. `usr/local/bin` (for OSX)
 - type `oscd` to run program
 
 ## Usage

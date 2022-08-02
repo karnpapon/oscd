@@ -139,7 +139,7 @@ fn lex_char(input: LocatedSpan) -> IResult<Token> {
     delimited(
       tag("\'"),
       map(cond(true, anychar), |x| x.unwrap()),
-      tag("\'"),
+      expect(tag("\'"), "missing ' after char"),
     ),
     Token::Char,
   )(input)
@@ -420,7 +420,7 @@ impl Lexer {
   pub fn analyse(source: &str) -> (Vec<Token>, Vec<Error>) {
     let errors = RefCell::new(Vec::new());
     let input = LocatedSpan::new_extra(source, State(&errors));
-    let (_, expr) = Self::lex_tokens(input).unwrap();
+    let (_, expr) = Self::lex_tokens(input).expect("parser cannot fail");
     (expr, errors.into_inner())
   }
 }
