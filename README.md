@@ -5,7 +5,7 @@
 
 `oscd`, a simple interactive [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) debugger for the terminal by using [nom](https://github.com/Geal/nom) as a lexer/parser, `oscd` offers auto type casting and support sending multiple osc arguments. 
 
-<img src="./screenshots/ss5.gif">
+<img src="./screenshots/ss6.gif">
 
 It has two simple features:
 

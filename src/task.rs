@@ -20,8 +20,14 @@ pub enum Task {
 impl fmt::Display for Task {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match &*self {
-      Task::Monitor(val) => write!(f, "monitor = {}", val),
-      Task::Send(val) => write!(f, "send = {}", val),
+      Task::Monitor(val) => {
+        let fmt = format!("{} = {}", "Monitor".blue(), val);
+        write!(f, "{}", fmt)
+      }
+      Task::Send(val) => {
+        let fmt = format!("{} = {}", "Send".green(), val);
+        write!(f, "{}", fmt)
+      }
     }
   }
 }

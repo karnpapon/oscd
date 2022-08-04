@@ -24,8 +24,8 @@ pub fn get_render_config() -> RenderConfig {
 
 pub fn prompt() -> InquireResult<()> {
   let tasks = vec![
-    Task::Monitor("Monitor OSC messages".to_string()),
-    Task::Send("Send OSC messages".to_string()),
+    Task::Monitor("monitor OSC messages".to_string()),
+    Task::Send("send OSC messages".to_string()),
   ];
 
   let task = Select::new("What do you want to do?", tasks)
