@@ -180,6 +180,16 @@ jobs:
         run: |
           printf "::set-output name=%s::%s\n" tag-name "${GITHUB_REF#refs/tags/}"
 
+      - name: Install ${{ matrix.rust }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+      - run: cargo publish --token ${CRATES_TOKEN}
+       env:
+         CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
+
       # - uses: mislav/bump-homebrew-formula-action@v1
       #   with:
       #     formula-path: ${{env.PROJECT_NAME}}.rb
@@ -203,20 +213,3 @@ jobs:
         #     bin.install "<bin-name>"
         #   end
         # end
-
-      
-      # Uncomment this section if you want to release your package to crates.io
-      # Before publishing, make sure you have filled out the following fields:
-      # license or license-file, description, homepage, documentation, repository, readme.
-      # Read more: https://doc.rust-lang.org/cargo/reference/publishing.html
-
-      - name: Install ${{ matrix.rust }} toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          target: ${{ matrix.target }}
-      - run: cargo publish --token ${CRATES_TOKEN}
-       env:
-         CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
-
