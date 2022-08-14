@@ -116,6 +116,31 @@ jobs:
     name: Publish
     needs: [dist]
     runs-on: ubuntu-latest
+    # strategy:
+    #   fail-fast: false # don't fail other jobs if one fails
+    #   matrix:
+    #     build: [x86_64-linux, aarch64-linux, x86_64-macos, x86_64-windows] #, x86_64-win-gnu, win32-msvc
+    #     include:
+    #     - build: x86_64-linux
+    #       os: ubuntu-20.04
+    #       rust: stable
+    #       target: x86_64-unknown-linux-gnu
+    #       cross: false
+    #     - build: aarch64-linux
+    #       os: ubuntu-20.04
+    #       rust: stable
+    #       target: aarch64-unknown-linux-gnu
+    #       cross: true
+    #     - build: x86_64-macos
+    #       os: macos-latest
+    #       rust: stable
+    #       target: x86_64-apple-darwin
+    #       cross: false
+    #     - build: x86_64-windows
+    #       os: windows-2019
+    #       rust: stable
+    #       target: x86_64-pc-windows-msvc
+    #       cross: false
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -180,36 +205,6 @@ jobs:
         run: |
           printf "::set-output name=%s::%s\n" tag-name "${GITHUB_REF#refs/tags/}"
 
-      # - uses: mislav/bump-homebrew-formula-action@v1
-      #   with:
-      #     formula-path: ${{env.PROJECT_NAME}}.rb
-      #     homebrew-tap: ${{ env.BREW_TAP }}
-      #     download-url: "https://github.com/${{ env.REPO_NAME }}/releases/download/${{ steps.extract-version.outputs.tag-name }}/${{env.PROJECT_NAME}}-${{ steps.extract-version.outputs.tag-name }}-x86_64-macos.tar.xz"
-      #     commit-message: updating formula for ${{ env.PROJECT_NAME }}
-      #   env:
-      #     COMMITTER_TOKEN: ${{ secrets.COMMITTER_TOKEN }}
-        #
-        # you can use this initial file in your homebrew-tap if you don't have an initial formula:
-        # <projectname>.rb
-        #
-        # class <Projectname capitalized> < Formula
-        #   desc "A test formula"
-        #   homepage "http://www.example.com"
-        #   url "-----"
-        #   version "-----"
-        #   sha256 "-----"
-
-        #   def install
-        #     bin.install "<bin-name>"
-        #   end
-        # end
-
-      
-      # Uncomment this section if you want to release your package to crates.io
-      # Before publishing, make sure you have filled out the following fields:
-      # license or license-file, description, homepage, documentation, repository, readme.
-      # Read more: https://doc.rust-lang.org/cargo/reference/publishing.html
-
       # - name: Install ${{ matrix.rust }} toolchain
       #   uses: actions-rs/toolchain@v1
       #   with:
@@ -217,6 +212,5 @@ jobs:
       #     toolchain: ${{ matrix.rust }}
       #     target: ${{ matrix.target }}
       # - run: cargo publish --token ${CRATES_TOKEN}
-      #  env:
-      #    CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
-
+      #   env:
+      #     CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
