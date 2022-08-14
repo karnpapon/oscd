@@ -1,6 +1,6 @@
 [package]
 name = "oscd"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 authors = ["karnpapon <karnpapon@gmail.com>"]
 license = "MIT"
@@ -15,7 +15,7 @@ name = "oscd"
 path = "src/main.rs"
 
 [dependencies]
-termion = { git = "https://gitlab.redox-os.org/Jezza/termion.git", branch = "windows-support" }
+termion = { git = "https://gitlab.redox-os.org/Jezza/termion.git", branch = "windows-support", version = "1.5.5" }
 colored = "2"
 inquire = { version = "0.2.1"}
 rosc = "0.8.1"

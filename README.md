@@ -61,8 +61,8 @@ It has two simple features:
   - x86_64-windows
 
 
-## Bypass security settings. (OSX)
-
+## Bypass security settings. (OSX) (optional, in case of manual install binary file instead of `cargo install oscd`)
+ 
 With each iteration of OS X from Mountain Lion onwards, Apple have made it progressively harder for users to access un-certificated downloaded applications/binary, such as those coming from the Open Source/Free Software community.
 
 The problem typically manifests when trying to launch a newly downloaded application/binary whether directly or via the Dock. At the point of downloading a new app, the OS places it on a “quarantine list”. An alarming error message is displayed indicating the application is “damaged”, or from an unidentified developer, and has been prevented from running.
