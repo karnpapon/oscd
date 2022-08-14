@@ -60,7 +60,7 @@ It has two simple features:
   - x86_64-windows
 
 
-## ⚠️ Bypass security settings. (OSX)
+## Bypass security settings. (OSX)
 
 With each iteration of OS X from Mountain Lion onwards, Apple have made it progressively harder for users to access un-certificated downloaded applications/binary, such as those coming from the Open Source/Free Software community.
 
