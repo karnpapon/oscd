@@ -7,6 +7,7 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/karnpapon/oscd"
 homepage = "https://github.com/karnpapon/oscd"
+description = "a simple interactive OSC (Open Sound Control) debugger for terminal"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
