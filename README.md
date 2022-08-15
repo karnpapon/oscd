@@ -2,7 +2,7 @@
 
 [![Build](https://github.com/karnpapon/oscd/actions/workflows/build.yml/badge.svg)](https://github.com/karnpapon/oscd/actions/workflows/build.yml)
 [![Release](https://github.com/karnpapon/oscd/actions/workflows/release.yml/badge.svg)](https://github.com/karnpapon/oscd/actions/workflows/release.yml)
-![crates.io](https://img.shields.io/crates/v/oscd.svg)
+[![crates.io](https://img.shields.io/crates/v/oscd.svg)](https://crates.io/crates/oscd)
 
 `oscd`, a simple interactive [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) debugger for the terminal by using [nom](https://github.com/Geal/nom) as a lexer/parser, `oscd` offers auto type casting and support sending multiple osc arguments. 
 
