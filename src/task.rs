@@ -57,6 +57,7 @@ pub fn send(port: u16, address: String) {
 
   let handler = thread::spawn(move || loop {
     // loop {
+    // let mut history: Vec<String> = Vec::new();
     let msg = Text::new("");
     let osc_msg = msg
       .with_render_config(prompt::get_render_config())
@@ -79,6 +80,7 @@ pub fn send(port: u16, address: String) {
               })
               .collect::<Vec<OscType>>();
             send_packet(port, address.clone(), osc_path, argument_msg);
+            // history.push(osc_msg.to_owned());
           }
           _ => println!(
             "{}{}",
@@ -108,10 +110,16 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<Osc
     .expect("Could not connect to socket at address");
 
   let packet = (osc_path, osc_args);
-  println!(
-    "{}{}",
-    "[SUCCESS]: ".green().dimmed(),
-    format!("packets = {:?}", packet).white().dimmed()
-  );
-  sender.send(packet).ok();
+  match sender.send(packet.clone()) {
+    Ok(value) => println!(
+      "{}{}",
+      "[SUCCESS]: ".green().dimmed(),
+      format!("packets = {:?}", packet).white().dimmed()
+    ),
+    Err(e) => println!(
+      "{}{}",
+      "[ERR]: ".red().dimmed(),
+      format!("{:?}", e).white().dimmed()
+    ),
+  }
 }
