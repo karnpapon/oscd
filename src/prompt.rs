@@ -1,26 +1,6 @@
 use super::task::{monitor, send, Task};
 use crate::{DEFAULT_IP, DEFAULT_PORT};
-use inquire::{
-  error::InquireResult,
-  ui::{Attributes, Color, RenderConfig, StyleSheet, Styled},
-  CustomType, Select, Text,
-};
-
-pub fn get_render_config() -> RenderConfig {
-  let mut render_config = RenderConfig::default();
-  render_config.prompt_prefix = Styled::new(">").with_fg(Color::LightRed);
-  render_config.error_message = render_config
-    .error_message
-    .with_prefix(Styled::new("❌").with_fg(Color::LightRed));
-
-  render_config.answer = StyleSheet::new()
-    .with_attr(Attributes::ITALIC)
-    .with_fg(Color::LightYellow);
-
-  render_config.help_message = StyleSheet::new().with_fg(Color::DarkYellow);
-
-  render_config
-}
+use inquire::{error::InquireResult, CustomType, Select, Text};
 
 pub fn prompt() -> InquireResult<()> {
   let tasks = vec![
