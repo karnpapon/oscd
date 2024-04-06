@@ -14,7 +14,7 @@ pub const DEFAULT_PORT: u16 = 57110;
 
 fn main() {
   let _app = clap_app!(oscd =>
-    (version: "0.1.4")
+    (version: "0.1.5")
     (author: "Karnpapon Boonput <karnpapon@gmail.com>")
     (about: "a simple interactive OSC debugger")
   )
