@@ -417,7 +417,7 @@ checksum = "648001efe5d5c0102d8cea768e348da85d90af8ba91f0bea908f157951493cd4"
 
 [[package]]
 name = "oscd"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "clap",
  "colored",
