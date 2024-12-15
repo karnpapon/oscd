@@ -2,7 +2,7 @@ use nom::{InputIter, InputLength, InputTake, Needed, Slice};
 use std::iter::Enumerate;
 // use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Default)]
 pub enum Token {
   Illegal,
   EOF,
@@ -24,6 +24,7 @@ pub enum Token {
   MidiMessage(MidiMsg),
   Color(Color),
   Blob(Vec<u8>),
+  #[default]
   Nil,
   Inf,
 }

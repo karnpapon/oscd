@@ -1,7 +1,11 @@
 use std::cell::RefCell;
+use std::fmt::Debug;
 use std::ops::Range;
+use std::slice;
 use std::{str, vec};
 
+use bytes::complete::{take_while, take_while1};
+use combinator::{fail, verify};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_till1, take_while_m_n};
 use nom::character::complete::{
@@ -12,6 +16,7 @@ use nom::multi::{many0, separated_list0};
 use nom::number::complete::double;
 use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
 use nom::*;
+use sequence::preceded;
 
 use super::token::{Color, MidiMsg, TimeMsg, Token};
 
@@ -25,11 +30,47 @@ trait ToRange {
   fn to_range(&self) -> Range<usize>;
 }
 
+trait Getter {
+  fn get_unoffsetted_string(&self) -> String;
+}
+
 impl<'a> ToRange for LocatedSpan<'a> {
   fn to_range(&self) -> Range<usize> {
     let start = self.location_offset();
     let end = start + self.fragment().len();
     start..end
+  }
+}
+
+impl<'a> Getter for LocatedSpan<'a> {
+  fn get_unoffsetted_string(&self) -> String {
+    let self_bytes = self.fragment().as_bytes();
+    let self_ptr = self_bytes.as_ptr();
+    unsafe {
+      assert!(
+        self.location_offset() <= isize::MAX as usize,
+        "offset is too big"
+      );
+      let orig_input_ptr = self_ptr.offset(-(self.location_offset() as isize));
+      let bytes = slice::from_raw_parts(orig_input_ptr, self.location_offset());
+      match std::str::from_utf8(bytes) {
+        Ok(s) => s.to_string(),
+        Err(e) => format!("Failed to convert: {}", e),
+      }
+    }
+  }
+}
+
+impl<'a, T: Default> Getter for IResult<'a, T> {
+  fn get_unoffsetted_string(&self) -> String {
+    let binding = RefCell::new(Vec::new());
+    let err = State(&binding);
+    let _unused_state = [5];
+    self
+      .as_ref()
+      .unwrap_or(&(LocatedSpan::new_extra("", err), T::default()))
+      .0
+      .get_unoffsetted_string()
   }
 }
 
@@ -164,23 +205,22 @@ fn lex_reserved_ident(input: LocatedSpan) -> IResult<Token> {
 
 // --------- osc_path ---------
 
+fn osc_method_segment(input: LocatedSpan) -> IResult<String> {
+  map(
+    alt((take_while(|b: char| {
+      (b.is_alphanumeric() || b.is_ascii_punctuation()) && b != '/'
+    }),)),
+    |s: LocatedSpan| s.fragment().to_string(),
+  )(input.clone())
+}
+
+fn osc_method(input: LocatedSpan) -> IResult<Vec<String>> {
+  separated_list0(tag("/"), osc_method_segment)(input)
+}
+
 fn lex_osc_path(input: LocatedSpan) -> IResult<Token> {
   map(
-    recognize(pair(
-      tag("/"),
-      many0(alt((
-        alphanumeric1,
-        tag("_"),
-        tag("-"),
-        tag("/"),
-        tag("*"),
-        tag("?"),
-        tag("!"),
-        tag("#"),
-        tag("["),
-        tag("]"),
-      ))),
-    )),
+    recognize(preceded(tag("/"), osc_method)),
     |s: LocatedSpan| match s.chars().next().unwrap() {
       '/' => Token::OSCPath(s.fragment().to_string()),
       _ => Token::Nil,
@@ -413,5 +453,53 @@ impl Lexer {
     let input = LocatedSpan::new_extra(source, State(&errors));
     let (_, expr) = Self::lex_tokens(input).expect("parser cannot fail");
     (expr, errors.into_inner())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use nom_locate::LocatedSpan;
+
+  use super::*;
+
+  #[test]
+  fn test_valid_addresses() {
+    let errors = RefCell::new(Vec::new());
+
+    let valid_osc_addr = [
+      "/",
+      "/cue/selected/level",
+      "/cue/selected/level/0/1/+",
+      "/cue/selected/level/0/1/-",
+      "/cue/0/{synth,drum}/-",
+      "/cue/0/{synth,drum}/.",
+      "/cue/0/{synth,drum}/*",
+      "/cue/0/[synth]/*",
+      "/press/bank/*/1",
+      "/press/bank/*/1?",
+      "/press/bank/1/",
+    ];
+
+    for addr in valid_osc_addr.iter() {
+      assert_eq!(
+        lex_osc_path(LocatedSpan::new_extra(addr, State(&errors))).get_unoffsetted_string(),
+        addr.to_string()
+      );
+    }
+
+    let invalid_osc_addr = [
+      "+", "#/", ")", " ",
+      "1",
+      // "//",
+      // "/cue/selected/level/0/1//",
+      // "/cue///level/0/1//",
+    ];
+
+    for addr in invalid_osc_addr.iter() {
+      assert_ne!(
+        lex_osc_path(LocatedSpan::new_extra(addr, State(&errors))).get_unoffsetted_string(),
+        addr.to_string()
+      );
+    }
   }
 }

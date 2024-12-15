@@ -1,6 +1,6 @@
 [package]
 name = "oscd"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 authors = ["karnpapon <karnpapon@gmail.com>"]
 license = "MIT"
@@ -18,7 +18,7 @@ path = "src/main.rs"
 [dependencies]
 termion = { git = "https://gitlab.redox-os.org/Jezza/termion.git", branch = "windows-support", version = "1.5.5" }
 colored = "2"
-inquire = { version = "0.2.1"}
+inquire = { version = "0.2.1" }
 rosc = "0.8.1"
 clap = "3.2.15"
 nom = "7.1.1"
@@ -27,8 +27,8 @@ nom_locate = "4.0.0"
 rustyline-derive = "0.8.0"
 
 [profile.release]
-panic = "abort" # Strip expensive panic clean-up logic
+panic = "abort"   # Strip expensive panic clean-up logic
 codegen-units = 1 # Compile crates one after another so the compiler can optimize better
-lto = true # Enables link to optimizations
-opt-level = "z" # Optimize for binary size
-strip = true # Remove debug symbols
+lto = true        # Enables link to optimizations
+opt-level = "z"   # Optimize for binary size
+strip = true      # Remove debug symbols
