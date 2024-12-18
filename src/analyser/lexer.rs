@@ -4,8 +4,7 @@ use std::ops::Range;
 use std::slice;
 use std::{str, vec};
 
-use bytes::complete::{take_while, take_while1};
-use combinator::{fail, verify};
+use bytes::complete::take_while;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_till1, take_while_m_n};
 use nom::character::complete::{
@@ -65,7 +64,6 @@ impl<'a, T: Default> Getter for IResult<'a, T> {
   fn get_unoffsetted_string(&self) -> String {
     let binding = RefCell::new(Vec::new());
     let err = State(&binding);
-    let _unused_state = [5];
     self
       .as_ref()
       .unwrap_or(&(LocatedSpan::new_extra("", err), T::default()))
@@ -211,7 +209,7 @@ fn osc_method_segment(input: LocatedSpan) -> IResult<String> {
       (b.is_alphanumeric() || b.is_ascii_punctuation()) && b != '/'
     }),)),
     |s: LocatedSpan| s.fragment().to_string(),
-  )(input.clone())
+  )(input)
 }
 
 fn osc_method(input: LocatedSpan) -> IResult<Vec<String>> {
