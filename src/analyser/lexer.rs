@@ -461,7 +461,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_valid_addresses() {
+  fn test_osc_addresses() {
     let errors = RefCell::new(Vec::new());
 
     let valid_osc_addr = [
@@ -496,6 +496,29 @@ mod tests {
     for addr in invalid_osc_addr.iter() {
       assert_ne!(
         lex_osc_path(LocatedSpan::new_extra(addr, State(&errors))).get_unoffsetted_string(),
+        addr.to_string()
+      );
+    }
+  }
+
+  #[test]
+  fn test_blob() {
+    let errors = RefCell::new(Vec::new());
+
+    let valid_blob_msg = ["%[10,20,30]"];
+
+    for addr in valid_blob_msg.iter() {
+      assert_eq!(
+        lex_blob(LocatedSpan::new_extra(addr, State(&errors))).get_unoffsetted_string(),
+        addr.to_string()
+      );
+    }
+
+    let invalid_blob_msg = ["%[-5,-12,43]", "%[10.1,20,30.2]", "%['test']"];
+
+    for addr in invalid_blob_msg.iter() {
+      assert_ne!(
+        lex_blob(LocatedSpan::new_extra(addr, State(&errors))).get_unoffsetted_string(),
         addr.to_string()
       );
     }
