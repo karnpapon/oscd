@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::ops::Range;
-use std::slice;
+use std::{slice, u8};
 use std::{str, vec};
 
 use bytes::complete::take_while;
@@ -72,7 +72,7 @@ impl<'a, T: Default> Getter for IResult<'a, T> {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Error(Range<usize>, String);
 
 #[derive(Clone, Debug)]
@@ -175,16 +175,44 @@ fn lex_char(input: LocatedSpan) -> IResult<Token> {
 // --------- Blob<Vec<u8>> ---------
 
 fn lex_blob(input: LocatedSpan) -> IResult<Token> {
+  let err_msg = "Blob value should be <u8>";
+  // TODO: handle displaying error msg when result (from `expect`) is None eg. input `%[10,1.2,4]`
   map(
-    delimited(tag("%["), separated_list0(tag(","), digit1), tag("]")),
-    |x: Vec<LocatedSpan>| {
+    delimited(
+      tag("%["),
+      separated_list0(tag(","), expect(digit1, err_msg)),
+      tag("]"),
+    ),
+    |x| {
       let vv = x
         .into_iter()
-        .filter_map(|e| e.fragment().parse::<u8>().ok())
-        .collect();
+        .filter_map(
+          |opt_span| match opt_span.clone()?.fragment().parse::<u8>() {
+            Ok(val) => Some(val),
+            Err(e) => {
+              let err = Error(
+                input.to_range(),
+                format!(
+                  "error at input {:?}: {:?}, {:?}",
+                  opt_span?.fragment(),
+                  e.to_string(),
+                  err_msg.to_string()
+                ),
+              );
+              input.extra.report_error(err);
+              None
+            }
+          },
+        )
+        .collect::<Vec<u8>>();
+      if vv.is_empty() {
+        let err = Error(input.to_range(), err_msg.to_string());
+        input.extra.report_error(err);
+        return Token::Illegal;
+      }
       Token::Blob(vv)
     },
-  )(input)
+  )(input.clone())
 }
 
 // --------- Ident (Bool, Nil, Inf) ---------
@@ -461,9 +489,8 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_osc_addresses() {
+  fn test_valid_osc_addresses() {
     let errors = RefCell::new(Vec::new());
-
     let valid_osc_addr = [
       "/",
       "/cue/selected/level",
@@ -484,7 +511,11 @@ mod tests {
         addr.to_string()
       );
     }
+  }
 
+  #[test]
+  fn test_invalid_osc_addresses() {
+    let errors = RefCell::new(Vec::new());
     let invalid_osc_addr = [
       "+", "#/", ")", " ",
       "1",
@@ -502,10 +533,9 @@ mod tests {
   }
 
   #[test]
-  fn test_blob() {
+  fn test_valid_blob() {
     let errors = RefCell::new(Vec::new());
-
-    let valid_blob_msg = ["%[10,20,30]"];
+    let valid_blob_msg = ["%[0]", "%[10,20,30]", "%[]", "%[255]"];
 
     for addr in valid_blob_msg.iter() {
       assert_eq!(
@@ -513,14 +543,32 @@ mod tests {
         addr.to_string()
       );
     }
+  }
 
-    let invalid_blob_msg = ["%[-5,-12,43]", "%[10.1,20,30.2]", "%['test']"];
-
-    for addr in invalid_blob_msg.iter() {
-      assert_ne!(
-        lex_blob(LocatedSpan::new_extra(addr, State(&errors))).get_unoffsetted_string(),
-        addr.to_string()
-      );
+  #[test]
+  fn test_invalid_blob() {
+    let invalid_blob_msg = [
+      (
+        "%[-5,-12,43]",
+        vec![Error(2..12, "Blob value should be <u8>".to_string())],
+      ),
+      ("%[257]", vec![
+        Error(0..6, "error at input \"257\": \"number too large to fit in target type\", \"Blob value should be <u8>\"".to_string()),
+        Error(0..6, "Blob value should be <u8>".to_string())
+      ]),
+      ( "%[100,200,257]", vec![Error(0..14, "error at input \"257\": \"number too large to fit in target type\", \"Blob value should be <u8>\"".to_string())] ),
+      ( "%['test']", vec![Error(2..9, "Blob value should be <u8>".to_string())] ),
+    ];
+    for (addr, expected_msg) in invalid_blob_msg.iter() {
+      let errors = RefCell::new(Vec::new());
+      let blob_res = LocatedSpan::new_extra(&**addr, State(&errors));
+      let exp = lex_blob(blob_res);
+      if let Ok(v) = exp {
+        let res_exp = v.0.extra.0.borrow();
+        assert_eq!(*res_exp, *expected_msg)
+      } else {
+        assert_eq!(*errors.borrow(), *expected_msg);
+      }
     }
   }
 }
