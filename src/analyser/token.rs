@@ -1,3 +1,4 @@
+use core::fmt;
 use nom::{InputIter, InputLength, InputTake, Needed, Slice};
 use std::iter::Enumerate;
 // use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
@@ -137,6 +138,36 @@ impl<'a> InputIter for Tokens<'a> {
     } else {
       Err(Needed::Unknown)
     }
+  }
+}
+
+impl fmt::Display for Token {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let name = match *self {
+      Token::Illegal => "Illegal",
+      Token::EOF => "EOF",
+
+      Token::Comma => "Comma",
+      Token::LBracket => "LBracket",
+      Token::RBracket => "RBracket",
+      Token::Ident(_) => "Ident",
+
+      Token::OSCPath(_) => "OSCPath",
+      Token::StringLiteral(_) => "StringLiteral",
+      Token::IntLiteral(_) => "IntLiteral",
+      Token::Long(_) => "Long",
+      Token::FloatLiteral(_) => "FloatLiteral",
+      Token::Double(_) => "Double",
+      Token::BoolLiteral(_) => "BoolLiteral",
+      Token::Char(_) => "Char",
+      Token::TimeMsg(_) => "TimeMsg",
+      Token::MidiMessage(_) => "MidiMessage",
+      Token::Color(_) => "Color",
+      Token::Blob(_) => "Blob",
+      Token::Nil => "Nil",
+      Token::Inf => "Inf",
+    };
+    write!(f, "{}", name)
   }
 }
 

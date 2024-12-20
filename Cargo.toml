@@ -25,6 +25,7 @@ nom = "7.1.1"
 rustyline = "11.0.0"
 nom_locate = "4.0.0"
 rustyline-derive = "0.8.0"
+tabled = "0.17.0"
 
 [profile.release]
 panic = "abort"   # Strip expensive panic clean-up logic

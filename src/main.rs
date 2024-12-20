@@ -5,6 +5,7 @@ use clap::*;
 mod analyser;
 mod osc;
 mod prompt;
+mod table;
 mod task;
 
 use prompt::prompt;

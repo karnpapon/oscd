@@ -10,12 +10,14 @@ use std::borrow::Cow::{self, Borrowed, Owned};
 use std::fmt;
 use std::io::{stdout, Write};
 use std::thread;
+use tabled::Table;
 use termion::screen::*;
 
 use super::analyser::lexer::Lexer;
 use super::analyser::parser::{parse_message, Expr, Literal, Parser, Stmt};
 use super::analyser::token::Tokens;
 use super::osc;
+use super::table::{CodeEditor, THEME};
 
 #[derive(Helper, Completer, Hinter, Validator)]
 pub struct MyHelper {
@@ -63,7 +65,7 @@ pub enum Task {
 
 impl fmt::Display for Task {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match &*self {
+    match self {
       Task::Monitor(val) => {
         let fmt = format!("{} = {}", "Monitor".blue(), val);
         write!(f, "{}", fmt)
@@ -115,7 +117,6 @@ pub fn send(port: u16, address: String) {
   screen.flush().unwrap();
 
   let handler = thread::spawn(move || loop {
-    // let readline = rl.readline(&format!("{}", ">  ".to_string().yellow()));
     let p = "> ".to_string();
     rl.helper_mut().expect("No helper").colored_prompt = format!("\x1b[1;32m{p}\x1b[0m");
     let readline = rl.readline(&p);
@@ -150,11 +151,23 @@ pub fn send(port: u16, address: String) {
               ),
             };
           }
-          (_, _) => println!(
-            "{}{}",
-            "[ERROR]: ".to_string().red().dimmed(),
-            format!("parsing msg {:?}", lex_error,).white().dimmed()
-          ),
+          (_, _) => {
+            let mut data = vec![];
+            for err in lex_error {
+              let errors = err.print_error();
+              data.push(CodeEditor::new(errors.0, errors.1, errors.2, errors.3));
+            }
+
+            let mut table = Table::new(data);
+            table.with(THEME);
+
+            println!(
+              "\n{}{}",
+              "[ERROR]: ".to_string().red().dimmed(),
+              "parsing msg".to_string().white().dimmed()
+            );
+            println!("{table}\n");
+          }
         }
 
         rl.add_history_entry(input.as_str()).unwrap();

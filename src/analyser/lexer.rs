@@ -72,8 +72,19 @@ impl<'a, T: Default> Getter for IResult<'a, T> {
   }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Error(Range<usize>, String);
+#[derive(Debug, PartialEq, Clone)]
+pub struct Error(Range<usize>, String, String, String);
+
+impl Error {
+  pub fn print_error(&self) -> (String, String, String, String) {
+    (
+      format!("({}..{})", self.0.clone().start, self.0.clone().end),
+      self.1.clone(),
+      self.2.clone(),
+      self.3.clone(),
+    )
+  }
+}
 
 #[derive(Clone, Debug)]
 pub struct State<'a>(pub &'a RefCell<Vec<Error>>);
@@ -95,7 +106,12 @@ where
   move |input| match parser(input) {
     Ok((remaining, out)) => Ok((remaining, Some(out))),
     Err(nom::Err::Error(input)) | Err(nom::Err::Failure(input)) => {
-      let err = Error(input.input.to_range(), error_msg.to_string());
+      let err = Error(
+        input.input.to_range(),
+        input.input.fragment().to_string(),
+        error_msg.to_string(),
+        format!("{}", Token::Illegal),
+      );
       input.input.extra.report_error(err);
       Ok((input.input, None))
     }
@@ -165,11 +181,28 @@ fn lex_char(input: LocatedSpan) -> IResult<Token> {
   map(
     delimited(
       tag("\'"),
-      map(cond(true, anychar), |x| x.unwrap()),
+      map(cond(true, anychar), |c| {
+        if let Some(char) = c {
+          if char.is_alphabetic() {
+            char
+          } else {
+            let err = Error(
+              input.to_range(),
+              input.fragment().to_string(),
+              r#"invalid char type, (hint: valid <char> 'a','Z' etc.)"#.to_string(),
+              format!("{}", Token::Char('\0')),
+            );
+            input.extra.report_error(err);
+            '\0'
+          }
+        } else {
+          '\0'
+        }
+      }),
       expect(tag("\'"), "missing ' after char"),
     ),
     Token::Char,
-  )(input)
+  )(input.clone())
 }
 
 // --------- Blob<Vec<u8>> ---------
@@ -191,13 +224,10 @@ fn lex_blob(input: LocatedSpan) -> IResult<Token> {
             Ok(val) => Some(val),
             Err(e) => {
               let err = Error(
-                input.to_range(),
-                format!(
-                  "error at input {:?}: {:?}, {:?}",
-                  opt_span?.fragment(),
-                  e.to_string(),
-                  err_msg.to_string()
-                ),
+                opt_span.clone()?.to_range(),
+                opt_span.clone()?.fragment().to_string(),
+                format!(r#"{:}, {:}"#, e, err_msg.to_string()),
+                format!("{}", Token::Blob(Vec::default())),
               );
               input.extra.report_error(err);
               None
@@ -206,7 +236,12 @@ fn lex_blob(input: LocatedSpan) -> IResult<Token> {
         )
         .collect::<Vec<u8>>();
       if vv.is_empty() {
-        let err = Error(input.to_range(), err_msg.to_string());
+        let err = Error(
+          input.to_range(),
+          input.fragment().to_string(),
+          err_msg.to_string(),
+          format!("{}", Token::Blob(Vec::default())),
+        );
         input.extra.report_error(err);
         return Token::Illegal;
       }
@@ -437,11 +472,13 @@ fn lex_error(input: LocatedSpan) -> IResult<Token> {
   map(take_till1(|c| c == '\n'), |span: LocatedSpan| {
     let err = Error(
       span.to_range(),
-      format!("Unexpected: `{}`", span.fragment()),
+      input.fragment().to_string(),
+      format!("Unexpected: {}", span.fragment()),
+      format!("{}", Token::Illegal),
     );
     span.extra.report_error(err);
     Token::Illegal
-  })(input)
+  })(input.clone())
 }
 
 fn lex_token(input: LocatedSpan) -> IResult<Token> {
@@ -550,14 +587,48 @@ mod tests {
     let invalid_blob_msg = [
       (
         "%[-5,-12,43]",
-        vec![Error(2..12, "Blob value should be <u8>".to_string())],
+        vec![Error(
+          2..12,
+          "-5,-12,43]".to_string(),
+          "Blob value should be <u8>".to_string(),
+          format!("{}", Token::Illegal),
+        )],
       ),
-      ("%[257]", vec![
-        Error(0..6, "error at input \"257\": \"number too large to fit in target type\", \"Blob value should be <u8>\"".to_string()),
-        Error(0..6, "Blob value should be <u8>".to_string())
-      ]),
-      ( "%[100,200,257]", vec![Error(0..14, "error at input \"257\": \"number too large to fit in target type\", \"Blob value should be <u8>\"".to_string())] ),
-      ( "%['test']", vec![Error(2..9, "Blob value should be <u8>".to_string())] ),
+      (
+        "%[257]",
+        vec![
+          Error(
+            2..5,
+            "257".to_string(),
+            "number too large to fit in target type, Blob value should be <u8>".to_string(),
+            format!("{}", Token::Blob(Vec::default())),
+          ),
+          Error(
+            0..6,
+            "%[257]".to_string(),
+            "Blob value should be <u8>".to_string(),
+            format!("{}", Token::Blob(Vec::default())),
+          ),
+        ],
+      ),
+      (
+        "%[100,200,257]",
+        vec![Error(
+          10..13,
+          "257".to_string(),
+          "number too large to fit in target type, Blob value should be <u8>".to_string(),
+          format!("{}", Token::Blob(Vec::default())),
+        )],
+      ),
+      (
+        "%['test']",
+        vec![Error(
+          2..9,
+          "'test']".to_string(),
+          "Blob value should be <u8>".to_string(),
+          format!("{}", Token::Illegal),
+        )],
+      ),
     ];
     for (addr, expected_msg) in invalid_blob_msg.iter() {
       let errors = RefCell::new(Vec::new());
