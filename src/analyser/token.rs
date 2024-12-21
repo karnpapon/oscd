@@ -1,11 +1,10 @@
 use core::fmt;
-use nom::{InputIter, InputLength, InputTake, Needed, Slice};
+use nom::{InputIter, InputLength, InputTake, Needed};
 use std::iter::Enumerate;
-// use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 
 #[derive(PartialEq, Debug, Clone, Default)]
 pub enum Token {
-  Illegal,
+  Illegal(String),
   EOF,
 
   Comma,
@@ -144,7 +143,7 @@ impl<'a> InputIter for Tokens<'a> {
 impl fmt::Display for Token {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     let name = match *self {
-      Token::Illegal => "Illegal",
+      Token::Illegal(_) => "Illegal",
       Token::EOF => "EOF",
 
       Token::Comma => "Comma",

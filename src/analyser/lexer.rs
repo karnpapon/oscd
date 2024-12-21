@@ -110,7 +110,7 @@ where
         input.input.to_range(),
         input.input.fragment().to_string(),
         error_msg.to_string(),
-        format!("{}", Token::Illegal),
+        format!("{}", Token::Illegal(input.input.fragment().to_string())),
       );
       input.input.extra.report_error(err);
       Ok((input.input, None))
@@ -216,8 +216,8 @@ fn lex_blob(input: LocatedSpan) -> IResult<Token> {
       separated_list0(tag(","), expect(digit1, err_msg)),
       tag("]"),
     ),
-    |x| {
-      let vv = x
+    |spans| {
+      let vec_blob_val = spans
         .into_iter()
         .filter_map(
           |opt_span| match opt_span.clone()?.fragment().parse::<u8>() {
@@ -235,7 +235,7 @@ fn lex_blob(input: LocatedSpan) -> IResult<Token> {
           },
         )
         .collect::<Vec<u8>>();
-      if vv.is_empty() {
+      if vec_blob_val.is_empty() {
         let err = Error(
           input.to_range(),
           input.fragment().to_string(),
@@ -243,25 +243,31 @@ fn lex_blob(input: LocatedSpan) -> IResult<Token> {
           format!("{}", Token::Blob(Vec::default())),
         );
         input.extra.report_error(err);
-        return Token::Illegal;
+        return Token::Illegal(input.fragment().to_string());
       }
-      Token::Blob(vv)
+      Token::Blob(vec_blob_val)
     },
   )(input.clone())
 }
 
 // --------- Ident (Bool, Nil, Inf) ---------
 fn lex_reserved_ident(input: LocatedSpan) -> IResult<Token> {
-  map(
-    recognize(pair(alpha1, many0(alphanumeric1))),
-    |span: LocatedSpan| match *span {
-      "true" => Token::BoolLiteral(true),
-      "false" => Token::BoolLiteral(false),
-      "Nil" => Token::Nil,
-      "Inf" => Token::Inf,
-      _ => Token::Illegal,
-    },
-  )(input)
+  map(recognize(alphanumeric1), |span: LocatedSpan| match *span {
+    "true" => Token::BoolLiteral(true),
+    "false" => Token::BoolLiteral(false),
+    "Nil" => Token::Nil,
+    "Inf" => Token::Inf,
+    _ => {
+      let err = Error(
+        input.to_range(),
+        input.fragment().to_string(),
+        "invalid message".to_string(),
+        format!("{}", Token::Ident(span.to_string())),
+      );
+      input.extra.report_error(err);
+      Token::Ident(span.to_string())
+    }
+  })(input.clone())
 }
 
 // --------- osc_path ---------
@@ -474,11 +480,11 @@ fn lex_error(input: LocatedSpan) -> IResult<Token> {
       span.to_range(),
       span.fragment().to_string(),
       format!("Unexpected: {}", span.fragment()),
-      format!("{}", Token::Illegal),
+      format!("{}", Token::Illegal(span.fragment().to_string())),
     );
     span.extra.report_error(err);
-    Token::Illegal
-  })(input.clone())
+    Token::Illegal(span.fragment().to_string())
+  })(input)
 }
 
 fn lex_token(input: LocatedSpan) -> IResult<Token> {
@@ -591,7 +597,7 @@ mod tests {
           2..12,
           "-5,-12,43]".to_string(),
           "Blob value should be <u8>".to_string(),
-          format!("{}", Token::Illegal),
+          format!("{}", Token::Illegal("".to_string())),
         )],
       ),
       (
@@ -626,7 +632,7 @@ mod tests {
           2..9,
           "'test']".to_string(),
           "Blob value should be <u8>".to_string(),
-          format!("{}", Token::Illegal),
+          format!("{}", Token::Illegal("".to_string())),
         )],
       ),
     ];
