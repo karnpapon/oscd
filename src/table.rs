@@ -27,11 +27,11 @@ impl CodeEditor {
 }
 
 type TableTheme = Settings<
-  Settings<Settings<Settings, Style<On, On, On, On, On, On, 0, 0>>, Padding>,
+  Settings<Settings<Settings, Style<On, On, On, On, (), On, 1, 0>>, Padding>,
   ModifyList<FirstRow, Alignment>,
 >;
 
 pub const THEME: TableTheme = Settings::empty()
-  .with(Style::ascii())
-  .with(Padding::new(1, 3, 0, 0))
+  .with(Style::rounded())
+  .with(Padding::new(1, 1, 0, 0))
   .with(Modify::list(Rows::first(), Alignment::center()));

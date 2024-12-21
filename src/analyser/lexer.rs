@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::ops::Range;
 use std::{slice, u8};
 use std::{str, vec};
@@ -95,7 +95,7 @@ impl<'a> State<'a> {
   }
 }
 
-pub fn expect<'a, F, E, T>(
+pub fn expect<'a, F, E, T: Display>(
   mut parser: F,
   error_msg: E,
 ) -> impl FnMut(LocatedSpan<'a>) -> IResult<Option<T>>
@@ -189,7 +189,7 @@ fn lex_char(input: LocatedSpan) -> IResult<Token> {
             let err = Error(
               input.to_range(),
               input.fragment().to_string(),
-              r#"invalid char type, (hint: valid <char> 'a','Z' etc.)"#.to_string(),
+              r#"invalid char, or ending single quote is missing/mismatch."#.to_string(),
               format!("{}", Token::Char('\0')),
             );
             input.extra.report_error(err);
@@ -199,7 +199,7 @@ fn lex_char(input: LocatedSpan) -> IResult<Token> {
           '\0'
         }
       }),
-      expect(tag("\'"), "missing ' after char"),
+      tag("\'"),
     ),
     Token::Char,
   )(input.clone())
@@ -472,7 +472,7 @@ fn lex_error(input: LocatedSpan) -> IResult<Token> {
   map(take_till1(|c| c == '\n'), |span: LocatedSpan| {
     let err = Error(
       span.to_range(),
-      input.fragment().to_string(),
+      span.fragment().to_string(),
       format!("Unexpected: {}", span.fragment()),
       format!("{}", Token::Illegal),
     );
@@ -496,7 +496,7 @@ fn lex_token(input: LocatedSpan) -> IResult<Token> {
     lex_integer,
     lex_reserved_ident,
     lex_char,
-    lex_error,
+    lex_error, // TODO:
   ))(input)
 }
 
