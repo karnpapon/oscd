@@ -261,7 +261,7 @@ fn lex_reserved_ident(input: LocatedSpan) -> IResult<Token> {
       let err = Error(
         input.to_range(),
         input.fragment().to_string(),
-        "invalid message".to_string(),
+        "Invalid message: The identity keyword only supports [true, false, Nil, Inf].".to_string(),
         format!("{}", Token::Ident(span.to_string())),
       );
       input.extra.report_error(err);

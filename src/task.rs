@@ -151,6 +151,23 @@ pub fn send(port: u16, address: String) {
               ),
             };
           }
+          (None, true) => {
+            let data = vec![CodeEditor::new(
+              "-".to_string(),
+              "-".to_string(),
+              r#"empty msg, example: /s_new "default" -1 0 0 "freq" 850"#.to_string(),
+              "-".to_string(),
+            )];
+            let mut table = Table::new(data);
+            table.with(THEME);
+
+            println!(
+              "\n{}{}",
+              "[ERROR]: ".to_string().red().dimmed(),
+              "parsing msg".to_string().white().dimmed()
+            );
+            println!("{table}\n");
+          }
           (_, _) => {
             let mut data = vec![];
             for err in lex_error {
