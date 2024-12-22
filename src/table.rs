@@ -8,20 +8,37 @@ use tabled::{
 };
 
 #[derive(Tabled)]
-pub struct CodeEditor {
+pub struct TableError {
   msg_type: String,
   range: String,
   input: String,
   message: String,
 }
 
-impl CodeEditor {
+#[derive(Tabled)]
+pub struct TableSuccess {
+  packet_size: String,
+  osc_address: String,
+  osc_message: String,
+}
+
+impl TableError {
   pub fn new(range: String, input: String, message: String, msg_type: String) -> Self {
     Self {
       msg_type,
       range,
       input,
       message,
+    }
+  }
+}
+
+impl TableSuccess {
+  pub fn new(packet_size: String, osc_address: String, osc_message: String) -> Self {
+    Self {
+      packet_size,
+      osc_address,
+      osc_message,
     }
   }
 }

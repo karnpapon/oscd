@@ -10,6 +10,8 @@ use std::borrow::Cow::{self, Borrowed, Owned};
 use std::fmt;
 use std::io::{stdout, Write};
 use std::thread;
+use tabled::settings::object::{Column, Columns, Row, Rows};
+use tabled::settings::Width;
 use tabled::Table;
 use termion::screen::*;
 
@@ -17,7 +19,7 @@ use super::analyser::lexer::Lexer;
 use super::analyser::parser::{parse_message, Expr, Literal, Parser, Stmt};
 use super::analyser::token::Tokens;
 use super::osc;
-use super::table::{CodeEditor, THEME};
+use super::table::{TableError, TableSuccess, THEME};
 
 #[derive(Helper, Completer, Hinter, Validator)]
 pub struct MyHelper {
@@ -152,7 +154,7 @@ pub fn send(port: u16, address: String) {
             };
           }
           (None, true) => {
-            let data = vec![CodeEditor::new(
+            let data = vec![TableError::new(
               "-".to_string(),
               "-".to_string(),
               r#"empty msg, example: /s_new "default" -1 0 0 "freq" 850"#.to_string(),
@@ -172,7 +174,7 @@ pub fn send(port: u16, address: String) {
             let mut data = vec![];
             for err in lex_error {
               let errors = err.print_error();
-              data.push(CodeEditor::new(errors.0, errors.1, errors.2, errors.3));
+              data.push(TableError::new(errors.0, errors.1, errors.2, errors.3));
             }
 
             let mut table = Table::new(data);
@@ -197,6 +199,7 @@ pub fn send(port: u16, address: String) {
 
 pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<OscType>) {
   let full_address = format!("{}:{}", address, port);
+  let (x, _) = termion::terminal_size().unwrap();
 
   let sender = osc::sender()
     .expect("Could not bind to default socket")
@@ -205,11 +208,18 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<Osc
 
   let packet = (osc_path, osc_args);
   match sender.send(packet.clone()) {
-    Ok(value) => println!(
-      "{}{}",
-      "[SUCCESS]: ".green().dimmed(),
-      format!("packets = {:?}", packet).white().dimmed()
-    ),
+    Ok(value) => {
+      let data = vec![TableSuccess::new(
+        format!("{} bytes", value),
+        packet.0.to_string(),
+        format!("{:?}", packet.1),
+      )];
+      let mut table = Table::new(data);
+      table.with(THEME);
+      table.modify(Columns::last(), Width::wrap((x / 2) as usize));
+      println!("{}", "\n[SUCCESS]: ".green().dimmed(),);
+      println!("{table}\n");
+    }
     Err(e) => println!(
       "{}{}",
       "[ERR]: ".red().dimmed(),
