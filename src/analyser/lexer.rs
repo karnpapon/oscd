@@ -4,7 +4,8 @@ use std::ops::Range;
 use std::{slice, u8};
 use std::{str, vec};
 
-use bytes::complete::take_while;
+use bytes::complete::{is_a, take_while};
+use combinator::map_res;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_till1, take_while_m_n};
 use nom::character::complete::{
@@ -462,13 +463,50 @@ pub fn lex_midimsg(input: LocatedSpan) -> IResult<Token> {
 
 // --------- TimeMsg ---------
 
-// TODO: support "thousand-separator" eg. 10_000_000
+fn parse_digits_with_underscores(input: LocatedSpan) -> IResult<String> {
+  let parser = many0(alt((
+    map(digit1, |s: LocatedSpan| s.to_string()),
+    map(char1('_'), |_| "_".to_string()),
+  )));
+
+  map(parser, |parts| parts.concat().replace('_', ""))(input)
+}
+
+fn parse_seconds(input: LocatedSpan) -> IResult<u32> {
+  let (input, seconds_str) = parse_digits_with_underscores(input)?;
+  let seconds = seconds_str.parse::<u32>().unwrap_or(0);
+  Ok((input, seconds))
+}
+
+fn parse_fractional(input: LocatedSpan) -> IResult<u32> {
+  let (input, fractional_str) =
+    opt(terminated(parse_digits_with_underscores, many0(char1(' '))))(input)?;
+
+  let fractional = fractional_str.unwrap_or_else(|| "".to_string());
+  let fractional = if !fractional.is_empty() {
+    fractional.parse::<u32>().unwrap_or(0)
+  } else {
+    0
+  };
+
+  Ok((input, fractional))
+}
+
+fn parse_time_segment(input: LocatedSpan) -> IResult<(u32, u32)> {
+  let mut parser = alt((map(
+    tuple((parse_seconds, char1('.'), parse_fractional)),
+    |(seconds, _, fractional): (u32, char, u32)| (seconds, fractional),
+  ),));
+
+  parser(input)
+}
+
 pub fn lex_timemsg(input: LocatedSpan) -> IResult<Token> {
-  let (inp, _) = tag("@")(input)?;
-  let (remaining, (seconds, fractional)) = separated_pair(digit1, char1('.'), digit1)(inp)?;
+  let (inp, _) = tag("@")(input.clone())?;
+  let (remaining, (seconds, fractional)) = parse_time_segment(inp)?;
   let msg = TimeMsg {
-    seconds: seconds.parse::<u32>().unwrap(),
-    fractional: fractional.parse::<u32>().unwrap(),
+    seconds,
+    fractional,
   };
   Ok((remaining, Token::TimeMsg(msg)))
 }
