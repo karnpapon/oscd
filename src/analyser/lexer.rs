@@ -462,9 +462,10 @@ pub fn lex_midimsg(input: LocatedSpan) -> IResult<Token> {
 
 // --------- TimeMsg ---------
 
+// TODO: support "thousand-separator" eg. 10_000_000
 pub fn lex_timemsg(input: LocatedSpan) -> IResult<Token> {
   let (inp, _) = tag("@")(input)?;
-  let (remaining, (seconds, fractional)) = separated_pair(digit1, char1(':'), digit1)(inp)?;
+  let (remaining, (seconds, fractional)) = separated_pair(digit1, char1('.'), digit1)(inp)?;
   let msg = TimeMsg {
     seconds: seconds.parse::<u32>().unwrap(),
     fractional: fractional.parse::<u32>().unwrap(),

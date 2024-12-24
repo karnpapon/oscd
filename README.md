@@ -31,28 +31,28 @@ It has two simple features:
   - eg. `65.4321_f64` is equivalent to `65.4321 as f64` (`Explicit conversion`)
   - it will be parsed osc as `Double(65.4321)`, otherwise `osc` will parsed it based on the input (eg. `65.4321` = `f32`).
 - see supported types below.
-- complete osc example `/s_new "default with whitespace" 1002 'A' 12_i32 12_i64 -12 -12_i32 -12_i64 12.4533 1.234_f64 #2f14DF12 ~00110011 @12345:23 [12,20,true] %[10,20,30]`
+- complete osc example `/s_new "default with whitespace" 1002 'A' 12_i32 12_i64 -12 -12_i32 -12_i64 12.4533 1.234_f64 #2f14DF12 ~00110011 @2208988800.23 [12,20,true] %[10,20,30]`
 
 ## Types
 
 `oscd` follows [OscType](https://docs.rs/rosc/latest/rosc/enum.OscType.html) from [rosc](https://github.com/klingtnet/rosc) library
 
-| status  | types                | example                    | notes                                                                    |
-| ------- | -------------------- | -------------------------- | ------------------------------------------------------------------------ |
-| &#9745; | Int(i32)             | `1234` or `1234_i32`       |                                                                          |
-| &#9745; | Long(i64)            | `1234_i64`                 |                                                                          |
-| &#9745; | Float(f32)           | `1234.32` or `1234.32_f32` |                                                                          |
-| &#9745; | Double(f64)          | `1234.25434_f64`           |                                                                          |
-| &#9745; | String(String)       | `"str goes here"`          | wrapped in doulble quotes is needed                                      |
-| &#9745; | Bool(bool)           | `true` or `false`          |                                                                          |
-| &#9745; | Char(char)           | `'S'`                      | wrapped in single quote is needed                                        |
-| &#9745; | Blob(Vec&#60;u8>)    | `%[10,20,30]`              | prefix with `%` separated by `,`                                         |
-| &#9745; | Time(OscTime)        | `@123456789:20`            | prefix with `@` separate fractional by `:` eg. `@<seconds>:<fractional>` |
-| &#9745; | Color(OscColor)      | `#2F14DF2A`                | prefix with `#` followed by base16 `#<red><green><blue><alpha>`          |
-| &#9745; | Midi(OscMidiMessage) | `~01F14FA4`                | prefix with `~` followed by base16 `~<port><status><data1><data2>`       |
-| &#9745; | Array(OscArray)      | `[10,20,true]`             |                                                                          |
-| &#9745; | Nil                  | `Nil`                      |                                                                          |
-| &#9745; | Inf                  | `Inf`                      |                                                                          |
+| status  | types                | example                    | notes                                                                                                                                                                                                                                                                                                       |
+| ------- | -------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| &#9745; | Int(i32)             | `1234` or `1234_i32`       |                                                                                                                                                                                                                                                                                                             |
+| &#9745; | Long(i64)            | `1234_i64`                 |                                                                                                                                                                                                                                                                                                             |
+| &#9745; | Float(f32)           | `1234.32` or `1234.32_f32` |                                                                                                                                                                                                                                                                                                             |
+| &#9745; | Double(f64)          | `1234.25434_f64`           |                                                                                                                                                                                                                                                                                                             |
+| &#9745; | String(String)       | `"str goes here"`          | wrapped in doulble quotes is needed                                                                                                                                                                                                                                                                         |
+| &#9745; | Bool(bool)           | `true` or `false`          |                                                                                                                                                                                                                                                                                                             |
+| &#9745; | Char(char)           | `'S'`                      | wrapped in single quote is needed                                                                                                                                                                                                                                                                           |
+| &#9745; | Blob(Vec&#60;u8>)    | `%[10,20,30]`              | prefix with `%` separated by `,`                                                                                                                                                                                                                                                                            |
+| &#9745; | Time(OscTime)        | `@2208988800.20`           | prefix with `@` separate fractional by `.` eg. `@<seconds>.<fractional>`, A time tag in OSC message consists of two 32-bit integers where the first one denotes the number of seconds since 1900-01-01 ([RFC 5905](https://datatracker.ietf.org/doc/html/rfc5905)) and the second the fractions of a second |
+| &#9745; | Color(OscColor)      | `#2F14DF2A`                | prefix with `#` followed by base16 `#<red><green><blue><alpha>`                                                                                                                                                                                                                                             |
+| &#9745; | Midi(OscMidiMessage) | `~01F14FA4`                | prefix with `~` followed by base16 `~<port><status><data1><data2>`                                                                                                                                                                                                                                          |
+| &#9745; | Array(OscArray)      | `[10,20,true]`             |                                                                                                                                                                                                                                                                                                             |
+| &#9745; | Nil                  | `Nil`                      |                                                                                                                                                                                                                                                                                                             |
+| &#9745; | Inf                  | `Inf`                      |                                                                                                                                                                                                                                                                                                             |
 
 ## Development
 
