@@ -135,6 +135,23 @@ pub fn send(port: u16, address: String) {
         let (_, stmt) = Parser::parse_tokens(tokens).unwrap_or((Tokens::new(&vec), Vec::new()));
 
         match (stmt.split_first(), lex_error.is_empty()) {
+          (None, true) => {
+            let data = vec![TableError::new(
+              "-".to_string(),
+              "-".to_string(),
+              r#"empty msg, example: /s_new "default" -1 0 0 "freq" 850"#.to_string(),
+              "-".to_string(),
+            )];
+            let mut table = Table::new(data);
+            table.with(THEME);
+
+            println!(
+              "\n{}{}",
+              "[ERROR]: ".to_string().red().dimmed(),
+              "parsing msg".to_string().white().dimmed()
+            );
+            println!("{table}\n");
+          }
           (Some((first, tail)), true) => {
             match first {
               Stmt::ExprStmt(Expr::Lit(Literal::OscPath(osc_path))) => {
@@ -152,23 +169,6 @@ pub fn send(port: u16, address: String) {
                 "osc path should start with / eg. /s_new".white().dimmed()
               ),
             };
-          }
-          (None, true) => {
-            let data = vec![TableError::new(
-              "-".to_string(),
-              "-".to_string(),
-              r#"empty msg, example: /s_new "default" -1 0 0 "freq" 850"#.to_string(),
-              "-".to_string(),
-            )];
-            let mut table = Table::new(data);
-            table.with(THEME);
-
-            println!(
-              "\n{}{}",
-              "[ERROR]: ".to_string().red().dimmed(),
-              "parsing msg".to_string().white().dimmed()
-            );
-            println!("{table}\n");
           }
           (_, _) => {
             let mut data = vec![];

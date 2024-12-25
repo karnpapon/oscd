@@ -8,13 +8,11 @@ use bytes::complete::{is_a, take_while};
 use combinator::map_res;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_till1, take_while_m_n};
-use nom::character::complete::{
-  alpha1, alphanumeric1, anychar, char as char1, digit1, multispace0,
-};
+use nom::character::complete::{alphanumeric1, anychar, char as char1, digit1, multispace0};
 use nom::combinator::{cond, map, opt, recognize};
 use nom::multi::{many0, separated_list0};
 use nom::number::complete::double;
-use nom::sequence::{delimited, pair, separated_pair, terminated, tuple};
+use nom::sequence::{delimited, pair, terminated, tuple};
 use nom::*;
 use sequence::preceded;
 
@@ -163,16 +161,35 @@ fn concat_slice_vec(c: &[u8], done: Vec<u8>) -> Vec<u8> {
 
 fn convert_vec_utf8(v: Vec<u8>) -> String {
   let slice = v.as_slice();
-  let ss = str::from_utf8(slice).unwrap();
-  ss.to_owned()
+  let string_slice = str::from_utf8(slice).unwrap();
+  string_slice.to_owned()
 }
 
 fn string(input: LocatedSpan) -> IResult<String> {
-  let st = delimited(tag("\""), map(pis, convert_vec_utf8), tag("\""));
-  map(st, |s| s)(input)
+  let inp = input.clone();
+  let st = delimited(tag("\""), map(pis, convert_vec_utf8), tag("\""))(inp.clone());
+
+  match st {
+    Ok(val) => Ok(val),
+    Err(e) => {
+      let _input = input.fragment();
+      let inn = if _input.is_empty() { "-" } else { _input };
+      let err = Error(
+        input.to_range(),
+        inn.to_string(),
+        r#"invalid string, the ending double quote is possibly missing."#.to_string(),
+        format!("{}", Token::StringLiteral("".to_string())),
+      );
+      inp.extra.report_error(err);
+      Err(e)
+    }
+  }
 }
 
 fn lex_string(input: LocatedSpan) -> IResult<Token> {
+  if input.fragment().is_empty() {
+    return map_res(is_a(""), |s| Err(nom::Err::Error(s)))(input);
+  }
   map(string, Token::StringLiteral)(input)
 }
 
@@ -531,7 +548,6 @@ fn lex_token(input: LocatedSpan) -> IResult<Token> {
     lex_osc_path,
     lex_punctuations,
     lex_blob,
-    lex_string,
     lex_timemsg,
     lex_midimsg,
     lex_color,
@@ -541,6 +557,7 @@ fn lex_token(input: LocatedSpan) -> IResult<Token> {
     lex_integer,
     lex_reserved_ident,
     lex_char,
+    lex_string,
     lex_error, // TODO:
   ))(input)
 }
