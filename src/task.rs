@@ -139,7 +139,7 @@ pub fn send(port: u16, address: String) {
             let data = vec![TableError::new(
               "-".to_string(),
               "-".to_string(),
-              r#"empty msg, example: /s_new "default" -1 0 0 "freq" 850"#.to_string(),
+              r#"invalid argument or empty msg, please check argument again or try: /s_new "default" -1 0 0 "freq" 850"#.to_string(),
               "-".to_string(),
             )];
             let mut table = Table::new(data);

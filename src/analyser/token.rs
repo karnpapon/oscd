@@ -4,7 +4,7 @@ use std::iter::Enumerate;
 
 #[derive(PartialEq, Debug, Clone, Default)]
 pub enum Token {
-  Illegal(String),
+  Illegal(Box<Token>),
   EOF,
 
   Comma,
@@ -29,7 +29,7 @@ pub enum Token {
   Inf,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct Color {
   pub red: u8,
   pub green: u8,
@@ -37,7 +37,7 @@ pub struct Color {
   pub alpha: u8,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct MidiMsg {
   pub port: u8,
   pub status: u8,
@@ -45,7 +45,7 @@ pub struct MidiMsg {
   pub data2: u8,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct TimeMsg {
   pub seconds: u32,
   pub fractional: u32,
@@ -142,8 +142,9 @@ impl<'a> InputIter for Tokens<'a> {
 
 impl fmt::Display for Token {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    let name = match *self {
-      Token::Illegal(_) => "Illegal",
+    let get_illegal_str = |token| format!("Illegal::{token}");
+    let name = match self {
+      Token::Illegal(token) => &get_illegal_str(token),
       Token::EOF => "EOF",
 
       Token::Comma => "Comma",
