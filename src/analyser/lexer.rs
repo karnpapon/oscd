@@ -92,6 +92,10 @@ impl<'a> State<'a> {
   pub fn report_error(&self, error: Error) {
     self.0.borrow_mut().push(error);
   }
+
+  pub fn is_empty(&self) -> bool {
+    self.0.borrow().is_empty()
+  }
 }
 
 pub fn expect<'a, F, E, T: Display>(
@@ -167,23 +171,7 @@ fn convert_vec_utf8(v: Vec<u8>) -> String {
 
 fn string(input: LocatedSpan) -> IResult<String> {
   let inp = input.clone();
-  let st = delimited(tag("\""), map(pis, convert_vec_utf8), tag("\""))(inp.clone());
-
-  match st {
-    Ok(val) => Ok(val),
-    Err(e) => {
-      let _input = input.fragment();
-      let inn = if _input.is_empty() { "-" } else { _input };
-      let err = Error(
-        input.to_range(),
-        inn.to_string(),
-        r#"invalid string, the ending double quote is possibly missing."#.to_string(),
-        format!("{}", Token::StringLiteral("".to_string())),
-      );
-      inp.extra.report_error(err);
-      Err(e)
-    }
-  }
+  delimited(tag("\""), map(pis, convert_vec_utf8), tag("\""))(inp)
 }
 
 fn lex_string(input: LocatedSpan) -> IResult<Token> {
@@ -369,6 +357,19 @@ fn long_int_parser(input: LocatedSpan) -> IResult<i64> {
   })(input)
 }
 
+// fn long_int_parser(input: LocatedSpan) -> IResult<i64> {
+//   let err_msg = "invalid long integer, currently only support casting to i32, i64 eg. 123_i64";
+
+//   map(expect(terminated(digit1, tag("_i64")), err_msg), |s| {
+//     if s.is_some() {
+//       let s = s.unwrap().fragment().to_string();
+//       s.parse::<i64>().unwrap_or(0)
+//     } else {
+//       0
+//     }
+//   })(input)
+// }
+
 // --------- Float(i32) ---------
 
 fn lex_float(input: LocatedSpan) -> IResult<Token> {
@@ -531,6 +532,10 @@ pub fn lex_timemsg(input: LocatedSpan) -> IResult<Token> {
 // --------- Error ---------
 
 fn lex_error(input: LocatedSpan) -> IResult<Token> {
+  // if !input.extra.is_empty() {
+  //   return map_res(is_a(""), |_| Ok::<Token, Error>(Token::EOF))(input);
+  // }
+
   map(take_till1(|c| c == '\n'), |span: LocatedSpan| {
     let err = Error(
       span.to_range(),
@@ -547,6 +552,7 @@ fn lex_token(input: LocatedSpan) -> IResult<Token> {
   alt((
     lex_osc_path,
     lex_punctuations,
+    lex_string,
     lex_blob,
     lex_timemsg,
     lex_midimsg,
@@ -557,7 +563,6 @@ fn lex_token(input: LocatedSpan) -> IResult<Token> {
     lex_integer,
     lex_reserved_ident,
     lex_char,
-    lex_string,
     lex_error, // TODO:
   ))(input)
 }
@@ -576,8 +581,10 @@ impl Lexer {
   pub fn analyse(source: &str) -> (Vec<Token>, Vec<Error>) {
     let errors = RefCell::new(Vec::new());
     let input = LocatedSpan::new_extra(source, State(&errors));
-    let (_, expr) = Self::lex_tokens(input).expect("parser cannot fail");
-    (expr, errors.into_inner())
+    match Self::lex_tokens(input) {
+      Ok((_, expr)) => (expr, errors.into_inner()),
+      Err(_) => (vec![], errors.into_inner()),
+    }
   }
 }
 
