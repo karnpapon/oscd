@@ -133,7 +133,7 @@ pub fn send(port: u16, address: String) {
         let tokens = Tokens::new(&osc_msg_vec);
         let vec = Vec::new();
         let (_, stmt) = Parser::parse_tokens(tokens).unwrap_or((Tokens::new(&vec), Vec::new()));
-
+        let failed_log_prefix = "❌ [FAILED]: ".to_string().red().dimmed();
         match (stmt.split_first(), lex_error.is_empty()) {
           (None, true) => {
             let data = vec![TableError::new(
@@ -145,11 +145,7 @@ pub fn send(port: u16, address: String) {
             let mut table = Table::new(data);
             table.with(THEME);
 
-            println!(
-              "\n{}{}",
-              "[ERROR]: ".to_string().red().dimmed(),
-              "parsing msg".to_string().white().dimmed()
-            );
+            println!("\n{}", failed_log_prefix,);
             println!("{table}\n");
           }
           (Some((first, tail)), true) => {
@@ -165,7 +161,7 @@ pub fn send(port: u16, address: String) {
               }
               _ => println!(
                 "{}{}",
-                "[ERROR]: ".to_string().red().dimmed(),
+                failed_log_prefix,
                 "osc path should start with / eg. /s_new".white().dimmed()
               ),
             };
@@ -180,11 +176,7 @@ pub fn send(port: u16, address: String) {
             let mut table = Table::new(data);
             table.with(THEME);
 
-            println!(
-              "\n{}{}",
-              "[ERROR]: ".to_string().red().dimmed(),
-              "parsing msg".to_string().white().dimmed()
-            );
+            println!("\n{}", failed_log_prefix,);
             println!("{table}\n");
           }
         }
@@ -200,6 +192,8 @@ pub fn send(port: u16, address: String) {
 pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<OscType>) {
   let full_address = format!("{}:{}", address, port);
   let (x, _) = termion::terminal_size().unwrap();
+  let success_log_prefix = "\n✅ [SUCCESS]: ".green().dimmed();
+  let failed_log_prefix = "❌ [FAILED]: ".to_string().red().dimmed();
 
   let sender = osc::sender()
     .expect("Could not bind to default socket")
@@ -217,12 +211,12 @@ pub fn send_packet(port: u16, address: String, osc_path: &str, osc_args: Vec<Osc
       let mut table = Table::new(data);
       table.with(THEME);
       table.modify(Columns::last(), Width::wrap((x / 2) as usize));
-      println!("{}", "\n[SUCCESS]: ".green().dimmed(),);
+      println!("{}", success_log_prefix);
       println!("{table}\n");
     }
     Err(e) => println!(
       "{}{}",
-      "[ERR]: ".red().dimmed(),
+      failed_log_prefix,
       format!("{:?}", e).white().dimmed()
     ),
   }
