@@ -77,7 +77,7 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
   if t1.tok.is_empty() {
     Err(Err::Error(Error::new(input, ErrorKind::Tag)))
   } else {
-    match t1.tok[0].clone() {
+    match t1.tok.first().unwrap().clone() {
       Token::Long(val) => Ok((i1, Literal::Long(val))),
       Token::IntLiteral(name) => Ok((i1, Literal::Int(name))),
       Token::StringLiteral(s) => Ok((i1, Literal::String(s))),
@@ -99,7 +99,7 @@ fn parse_ident(input: Tokens) -> IResult<Tokens, Ident> {
   if t1.tok.is_empty() {
     Err(Err::Error(Error::new(input, ErrorKind::Tag)))
   } else {
-    match t1.tok[0].clone() {
+    match t1.tok.first().unwrap().clone() {
       Token::Ident(name) => Ok((i1, Ident(name))),
       Token::Nil => Ok((i1, Ident("Nil".to_string()))),
       Token::Inf => Ok((i1, Ident("Inf".to_string()))),
@@ -154,17 +154,13 @@ fn parse_comma_exprs(input: Tokens) -> IResult<Tokens, Expr> {
   preceded(comma_tag, parse_expr)(input)
 }
 
-fn empty_boxed_vec(input: Tokens) -> IResult<Tokens, Vec<Expr>> {
+fn empty_vec(input: Tokens) -> IResult<Tokens, Vec<Expr>> {
   Ok((input, vec![]))
 }
 
 pub fn parse_array_expr(input: Tokens) -> IResult<Tokens, Expr> {
   map(
-    delimited(
-      lbracket_tag,
-      alt((parse_exprs, empty_boxed_vec)),
-      rbracket_tag,
-    ),
+    delimited(lbracket_tag, alt((parse_exprs, empty_vec)), rbracket_tag),
     Expr::Array,
   )(input)
 }
