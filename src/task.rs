@@ -151,13 +151,23 @@ pub fn send(port: u16, address: String) {
           (Some((first, tail)), true) => {
             match first {
               Stmt::ExprStmt(Expr::Lit(Literal::OscPath(osc_path))) => {
-                let argument_msg = tail
-                  .iter()
-                  .map(|x| match x {
-                    Stmt::ExprStmt(v) => parse_message(v),
-                  })
-                  .collect::<Vec<OscType>>();
-                send_packet(port, address.clone(), osc_path, argument_msg);
+                match tail.first().unwrap()  {
+                  Stmt::ExprStmt(Expr::Lit(Literal::OscPath(invalid_msg)))  => println!(
+                    "{}{}",
+                    failed_log_prefix,
+                    format!(r#"OSC path is already declared. If you intended to send msg as string, try wrapping {} in double quotes, example: "this is a string""#, invalid_msg).white().dimmed()
+                  ),
+                  _ => {
+                    let argument_msg = tail
+                    .iter()
+                    .map(|x| match x {
+                      Stmt::ExprStmt(v) => parse_message(v),
+                    })
+                    .collect::<Vec<OscType>>();
+                  send_packet(port, address.clone(), osc_path, argument_msg);
+                  }
+                }
+                
               }
               _ => println!(
                 "{}{}",
